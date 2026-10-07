@@ -100,6 +100,10 @@ uv run python -m infra.run -y        --run-config infra/configs/run_configs/clau
 `--dry-run` resolves the task, prompt, attachments and output path without touching a model or
 a browser. Each example config has a header comment on what to change.
 
+**Try one task first.** A full cohort is 101 attempts; start with one. CLI: set `task_ids: [1]`
+in the batch config. Coding: `--task-ids 1`. GUI and Excel: `--task-id 1`. Then grade it with
+`grade.py --all` (below) and look at `outputs/gradings/<id>/scores.json`.
+
 ## Grade attempts
 
 The judge reads every `outputs/attempts/**/task_attempts.jsonl`, stages each attempt with its
