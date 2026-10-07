@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.egg-info/
+*.log
+.env
+infra/configs/configs.yaml
+browser_profiles/
+scratch/

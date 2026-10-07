@@ -1,0 +1,168 @@
+# Judge settings. Tracked; no secrets.
+#
+# What is deliberately absent, and where it lives instead:
+#   data / output roots, API keys,     -> <MBABench>/config/config.yaml
+#   LibreOffice binary                    (local.*, keys.*, libreoffice_path)
+#   rubric pair and category order     -> utils/misc_utils.py constants
+#                                         (rubric_9 + rubric_9_weights)
+#
+# Every key is exported as {project.name}_{SECTION}_{KEY} by
+# utils/misc_utils.load_project_configs().
+
+project:
+  name: "MBABenchJudge" # env-var prefix (MBABENCHJUDGE_*)
+
+paths:
+  scratch_path: "scratch"   # relative to judge/
+  # The soffice binary for --run-calculation, the answer check's recalculation
+  # and the deterministic checks. null = find it: LIBREOFFICE_PATH,
+  # then libreoffice_path in <MBABench>/config/config.yaml, then soffice on
+  # PATH, then the macOS app bundle. Set a path here only for an unusual install.
+  libreoffice_path: null
+
+miscs:
+  logger_name: "mbabench_judge"
+  log_to_terminal: true
+
+judge:
+  rubric_max_mistakes: 1
+
+  # Uncached-formula pre-flight (utils/formula_cache.py). The judge reads
+  # cached formula results, so a workbook saved without calculation reaches it
+  # as formulas with no values and Accuracy cannot be graded from evidence.
+  # A workbook whose uncached fraction is >= this ratio refuses to grade;
+  # re-run with --run-calculation, or JUDGE_SKIP_FORMULA_CACHE_CHECK=1 to
+  # grade anyway (recorded in scored_results.formula_cache).
+  uncached_formula_max_ratio: 0.5
+
+  # Retired rubric_9 checks: forced not_applicable on every task, never
+  # prompted or scored; the category rescales around them
+  # like suitability gating. The rubric keeps its 132-position numbering
+  # (annotations and past gradings are keyed by position), so this is
+  # a rule, not a deletion. utils/rubric_suitability.RETIRED_CHECK_NAMES pins
+  # the name each number must carry; a mismatch refuses to grade.
+  # 37 = M&A / divestiture flexibility, 101 = Architecture suited to audience.
+  # 28 = No unused formatting (meant to come back once it is redefined).
+  # Taking a number off this list un-retires it with no
+  # other change: the pin stays, and evidence served for that check alone
+  # (28: "styled empty cells in used range") is rendered again.
+  retired_checks: "28,37,101"
+
+  do_rounding: true
+  float_rounding: 6
+  percentage_rounding: 8
+  fast_cell_extract: true
+
+  # Per-call trajectory recording (utils/trajectory.py), kept with the grading.
+  record_trajectory: true
+
+  # Default grader label (override with --model); must be registered in
+  # judge_identities.yaml, which pins its endpoint, wire model id, and effort.
+  # Needs keys.openai_api_key (or $OPENAI_API_KEY).
+  default_grader: "openai/gpt-5.6-sol"
+
+# The judge: one tool-calling conversation over every applicable check.
+# Rows record these versions. max_rounds 500 is effectively unbound; set a
+# production value from measured round usage, not by feel.
+#
+# What the current version comprises (detchecks/ describes the Python checks):
+#  - every sheet is served, the cover included (--ignore-sheets drops some);
+#  - the harness answer check decides Final calculation accuracy
+#    (--accuracy-check; both engines are always recorded), with the
+#    answer-equivalence rulebook rendered into the prompt and the task
+#    author's alternate accepted answers (alternate_answers.yaml);
+#  - a workbook-properties block per sheet (tab order, hidden state,
+#    validation, widths, freeze position, print estimate) and evidence flags
+#    (IMPLICIT INTERSECTION, PERIOD SERIES, content fit measured in the
+#    cell's own font, WIDE OUTLIER, OVERSIZED RANGE, MULTI-PAGE / NO MANUAL
+#    BREAKS, zero-looking displays tagged with their actual value);
+#  - judge-only scope notes (rubric_9_guidance.yaml) under the checks;
+#  - the deterministic rubric checks before the LLM (det_checks below),
+#    whose verdicts replace the LLM's at scoring for the live list;
+#  - a native Anthropic path with prompt caching for Anthropic graders.
+# Bump version whenever prompt, evidence, rubric handling, deterministic
+# checks or scoring change.
+single_pass:
+  version: 14
+  prompt_template: "prompts/agentic_judge_template_8.yaml"
+  prompt_version: "8"
+  max_rounds: 500
+  max_forced_rounds: 50
+  context_token_limit: 850000   # below GPT-5.6 Sol's 922k input cap so eviction fires before a 400
+  read_file_max_cells: 5000     # matches the limit the prompt states
+  # Whether a numeric answer typed as a constant (no live formula) counts as
+  # a mistake for the harness's Final-calculation-accuracy verdict. Recorded
+  # per grading in scored_results.accuracy_engine.
+  hardcoded_counts: true
+
+# Deterministic rubric checks (utils/det_checks.py runs the
+# graders in judge/detchecks/). Python grades
+# these checks from the DELIVERED workbook before the LLM runs; the LLM still
+# grades every check, blind to Python, and both verdicts are recorded
+# (scored_results.accuracy_engine.checks, det_checks.json). Numbers are
+# rubric_9 positions, each pinned to its (category, name) in
+# utils/det_checks.DET_CHECK_NAMES: a number whose pin, rubric position or
+# detchecks key disagree refuses to grade. Only checks the task's
+# suitability annotation leaves applicable are graded (never a retired one).
+# No fallback: a check that cannot grade the file fails the grading before
+# the LLM call. No unresolved cell warnings (23) and Automatic calculation
+# mode (100) stay with the LLM (not built).
+det_checks:
+  # true: every driver runs them (= --det-checks harness);
+  # false: off unless --det-checks harness|llm is passed.
+  enabled: true
+  # The Python verdict replaces the LLM's at scoring:
+  #   29 Clean Name Manager, 47 No bright-yellow highlighting,
+  #   49 Black font for calculations, 50 Green font for cross-sheet links,
+  #   51 Red font for external links, 61 Consistent zoom level,
+  #   62 Active cell reset to A1 on all sheets, 66 Zeros as dashes,
+  #   69 Sufficient column widths, 70 Reasonable column widths,
+  #   73 Reasonable row heights, 74 No merged cells,
+  #   77 File extension (.xlsx), 80 Avoid volatile functions,
+  #   87 Avoid whole-column references, 92 No hidden sheets,
+  #   93 No hidden rows/columns, 94 No white-on-white hiding,
+  #   95 No external links
+  live: "29,47,49,50,51,61,62,66,69,70,73,74,77,80,87,92,93,94,95"
+  # Python runs and is recorded; the LLM's verdict counts
+  # (detchecks marks both Check.live = False, so neither can be listed live):
+  #   22 No formula errors, 65 Negatives in parentheses
+  recorded_only: "22,65"
+  # Formula values of a file not saved by Excel come from a LibreOffice
+  # recalculation of the delivered file (paths.libreoffice_path; the copy
+  # goes to <task folder>/det_checks_recalc/, deleted by the adapter as soon
+  # as the checks finish). Excel recalculation stays OFF (Mac Excel asks for
+  # file access on every file); cells
+  # LibreOffice cannot compute are used as displayed.
+  excel_recalc: false
+  # Timeout of the first LibreOffice try; doubled on every retry.
+  libreoffice_timeout_seconds: 600
+  # Size limit: 0 (or null) = NO LIMIT - every attempt is graded, whatever
+  # its size. A positive value (MB = 1,000,000 bytes) is for TEST RUNS only:
+  # a larger file not saved by Excel then fails the grading before the LLM
+  # call ("not graded: too large").
+  libreoffice_max_mb: 0
+  # Memory safety instead of a size cap (detchecks/core/lo_guard.py).
+  # It covers EVERY LibreOffice run of a
+  # grading: the det-checks recalculation, the answer check's
+  # recalculation and --run-calculation.
+  #  - One LibreOffice at a time on the machine, across all grading
+  #    processes and worker threads: an exclusive lock on this file
+  #    (null / "" = /tmp/mbabench_libreoffice.lock).
+  libreoffice_lock_path: null
+  #  - Wait at most this long for that lock (one stuck file cannot stall a
+  #    run); then the attempt
+  #    fails loudly and is listed for re-run, as below.
+  libreoffice_max_lock_wait_minutes: 180
+  #  - Before each run, holding the lock, wait until at least this much of
+  #    the machine's memory is free (macOS memory_pressure, Linux
+  #    /proc/meminfo), logging while it waits ...
+  libreoffice_min_free_pct: 25
+  #  - ... for at most this long; then the attempt fails loudly (no grading
+  #    row, logged FAILED, the batch continues) and the run's end summary
+  #    lists it to be re-run when the machine has memory to spare.
+  libreoffice_max_wait_minutes: 60
+  #  - A run that fails (crash, no copy, timeout) is retried this many
+  #    times, the timeout doubled each time, waiting for the lock and for
+  #    memory again before each try; only after the last retry does the
+  #    grading fail loudly (listed for re-run, as above).
+  libreoffice_retries: 3

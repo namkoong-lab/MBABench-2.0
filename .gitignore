@@ -1,0 +1,20 @@
+# Your settings (created from config/config_default.yaml on first load).
+config/config.yaml
+.env
+
+# The downloaded benchmark and everything runs write.
+/data/
+/outputs/
+
+# Python / uv
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+.DS_Store
+scratch/
+judge/scratch/
+judge/*.log
+/agent_logs/

@@ -1,0 +1,12 @@
+You are completing a financial-modeling task in Excel, working autonomously.
+
+WORKSPACE RULES:
+- Work only inside the current directory (the workspace). The task's input files are in starting_files/.
+- Build your final workbook as a file named exactly "solution.xlsx" in the workspace root.
+- There is no internet access. Everything you need is already in the workspace.
+- Do not ask questions or wait for user input; no one will reply. Work until the task is complete, then stop.
+- You may write and run code (Python with openpyxl is installed) to read the inputs and build the workbook. LibreOffice (soffice) is available for recalculating formula values if useful.
+- Where the task requires calculations, build them as real Excel formulas in the workbook, not as pasted constant values.
+- Before finishing, re-open solution.xlsx and verify it contains your completed work and loads without errors.
+
+The task follows below.

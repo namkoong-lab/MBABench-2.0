@@ -1,0 +1,27 @@
+# claudecode_anthropic/claude-fable-5-1-max — Claude Code on Claude Fable 5.1 at
+# effort max, Anthropic API direct. The coding leaderboard cohort.
+#
+# Run from the repo root with ANTHROPIC_API_KEY in the environment (or
+# keys.anthropic_api_key in config/config.yaml) and the sandbox image built
+# (docker build -t mbabench-coding-agent:v2 coding-agents/docker/):
+#
+#   uv run python -m coding_agent.run_sweep --config coding-agents/run_configs/claude_code_fable_5_1_max.yaml --dry-run
+#   uv run python -m coding_agent.run_sweep --config coding-agents/run_configs/claude_code_fable_5_1_max.yaml
+#   uv run python -m coding_agent.run_task  --config coding-agents/run_configs/claude_code_fable_5_1_max.yaml --task-id 11
+#
+# Everything the attempt does is pinned elsewhere and referenced from here:
+# the cli / model / effort / extra_args / env by the agent_model_name entry in
+# coding_agent/agent_identities.yaml, the prompt by template_version
+# (v13 + system_prompt_coding_v1 -> prompt_version 113), the CLI versions by
+# the sandbox image tag. Tasks are read from <data_root>/tasks/ and attempts
+# written to <output_root>/attempts/claudecode_anthropic/claude-fable-5-1-max/;
+# a relaunch skips tasks that already have a non-failed row.
+agent_model_name: claudecode_anthropic/claude-fable-5-1-max
+template_version: v13
+
+tasks:
+  first: 1
+  last: 101
+
+sandbox:
+  image: mbabench-coding-agent:v2

@@ -1,0 +1,66 @@
+# openpyxl_anthropic/claude-fable-5-1-max — Claude Fable 5.1 at effort max through the
+# openpyxl/MCP CLI harness, Anthropic API direct. The CLI leaderboard cohort.
+#
+# Run from the repo root with ANTHROPIC_API_KEY in the environment (or
+# keys.anthropic_api_key in config/config.yaml). Tasks are read from
+# <data_root>/tasks/ (scripts/download_dataset.py), attempts are written to
+# <output_root>/attempts/openpyxl_anthropic/claude-fable-5-1-max/ — the folder
+# per attempt plus one row in task_attempts.jsonl, which the judge reads.
+#
+#   uv run excel-agent --batch-config cli-agents/examples/anthropic_claude_fable_5_1_max.yaml --dry-run
+#   uv run excel-agent --batch-config cli-agents/examples/anthropic_claude_fable_5_1_max.yaml
+#
+# One lane takes a long time (101 tasks at up to 40 model calls each). To split
+# it, copy this file, give each copy a disjoint task_ids list, and run the copies
+# side by side: they append to the same task_attempts.jsonl under a lock, and a
+# relaunch skips tasks that already have a non-failed row.
+
+batch_name: "openpyxl_anthropic/claude-fable-5-1-max - all tasks (v16)"
+
+# The cohort label is the ONLY model key. Its entry in
+# excel_cli_agent/agent_identities.yaml supplies model (claude-fable-5-1),
+# reasoning_effort (max), max_completion_tokens, base_url (Anthropic direct),
+# fresh_context_mode, enhanced_excel_context and recent_history_count; setting
+# any of them here refuses to run, so every row under this label ran with the
+# same settings. They are recorded on each attempt row under extra_configs.
+agent_model_name: "openpyxl_anthropic/claude-fable-5-1-max"
+
+# Pins both prompt files and the attachment (excel_cli_agent/prompt_versions.py):
+#   v16 -> prompts/system_prompt_v16.txt
+#        + prompts/task_template_shared_v9.txt
+#        + house_standards/House_Standards_v1.md, delivered into the
+#          workspace as HOUSE_STANDARDS.md and embedded in the context
+# Recorded as prompt_version 1609 (system*100 + template).
+prompt_version: "v16"
+
+# Task selection. Omit task_ids to run every task present under <data_root>/tasks/
+# (ascending id); list ids to run a subset, in the given order.
+# task_ids: [
+#   1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+#   11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+#   21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+#   31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+#   41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+#   51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+#   61, 62, 63, 64, 65, 66, 67, 68, 69, 70,
+#   71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
+#   81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+#   91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
+#   101
+# ]
+
+# Skip tasks this cohort already has a non-failed row for (default true); set
+# false to attempt every selected task again.
+skip_if_attempted: true
+
+verbose: true
+
+# The two run limits, recorded on every attempt row under extra_configs.
+# Hitting the iteration cap is NOT a failure: the row lands with
+# agent_failed=false and reason "Max iterations (40) reached", and whatever
+# solution.xlsx exists at that point is the graded workbook.
+max_iterations: 40
+api_timeout_seconds: 3600
+
+# Delete the working copy once the attempt is recorded (default true).
+cleanup_workspace: true

@@ -1,0 +1,399 @@
+# Agent identity registry — THE place that defines what a cohort name means.
+#
+# A run config names its cohort with ONE key, agent_model_name (the value
+# written to task_attempts.agent_model_name and used as the S3 prefix), and
+# nothing else about the agent. The entry here for that label supplies every
+# setting that changes what the agent does; the runner builds its agent
+# command from them and refuses to start if the config carries an `agent:`
+# block or any of these keys itself (one source of truth):
+#
+#   cli          claude | codex — which vendor CLI runs the attempt
+#   model        vendor model id passed to the CLI's --model
+#   effort       claude: --effort low|medium|high|xhigh|max; codex:
+#                -c model_reasoning_effort=...; null when not pinned
+#   extra_args   extra CLI flags (rung-0 corrections live here, not in code)
+#   env          extra env vars injected into the sandbox (no secrets)
+#
+# Underneath every entry the harness applies its own long-turn defaults
+# (coding_agent/agents.py: CLAUDE_HARNESS_ENV for claude, per-provider
+# stream/retry settings for codex) and records them per row as
+# extra_configs.harness_defaults; an entry's env / extra_args override them.
+#
+# An unknown label refuses to run and prints a ready-to-paste stanza. All
+# five settings are written to every attempt row's extra_configs
+# (task_attempts.jsonl),
+# together with the sandbox image, so a row records the exact settings it
+# ran under and can be audited later without trusting this file.
+#
+# Existing entries should normally not change. agent_model_name is what
+# identifies a group of runs: the judge, get_results and the paper tables all
+# group rows by it and assume every row under a label ran with the same
+# settings. Edit an entry's other fields only with the explicit intent that
+# the new runs be grouped with the existing ones under that label. Otherwise
+# add a new entry with a new label.
+#
+# Rules, enforced at load: every agent_model_name unique; every
+# (cli, model, effort) combination unique; every field above present on
+# every entry.
+
+# Earlier-wave cohorts.
+- agent_model_name: claudecode_anthropic/claude-fable-5-max
+  cli: claude
+  model: claude-fable-5
+  effort: max
+  extra_args: []
+  # 2026-08-30 mid-wave (maintainer): raise Claude Code's default 64k output cap —
+  # it terminally failed ~7 wave attempts — and lengthen the per-request
+  # timeout (terminal "Request timed out" killed ~6 more; value matches the
+  # haiku entry). Rows before/after distinguishable via extra_configs.env.
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+
+- agent_model_name: codex_openai/gpt-5.6-sol-xhigh
+  cli: codex
+  model: gpt-5.6-sol
+  effort: xhigh
+  extra_args: []
+  env: {}
+
+# Cheap pipeline-shakeout cohort; never a paper cohort.
+- agent_model_name: claudecode_anthropic/claude-haiku-4-5
+  cli: claude
+  model: claude-haiku-4-5-20251001
+  effort: null
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+
+# ---------------------------------------------------------------------------
+# 2026-09-10: the 101-task MBABench rerun cohorts. Live-probed the same day:
+#
+#   claude-fable-5-1  listed by Anthropic /v1/models (128000 output ceiling);
+#                     output_config.effort accepts low/medium/high/xhigh/max
+#                     ("max" accepted on a live request). Claude Code's
+#                     --effort takes the same ladder (verified 2.1.223 in
+#                     agents.py), so max is the top tier here too. Same env
+#                     as the fable-5-max entry (128k output cap, 1h request
+#                     timeout — the mid-wave fixes) so the two Claude Code
+#                     cohorts differ only in model.
+#   gpt-6-astra       listed by OpenAI /v1/models; the Responses API accepts
+#                     reasoning.effort up to "max", but Codex's own config
+#                     enum for model_reasoning_effort is
+#                     minimal|low|medium|high|xhigh (config reference,
+#                     2026-09-10), so xhigh is the top tier reachable through
+#                     the Codex CLI. If a rung-0 run shows a newer Codex
+#                     accepting "max", register a separate -max entry rather
+#                     than editing this one.
+- agent_model_name: claudecode_anthropic/claude-fable-5-1-max
+  cli: claude
+  model: claude-fable-5-1
+  effort: max
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+    # 2026-09-11 (maintainer, in-place env edit like the fable-5 entry on 08-30 —
+    # rows before/after distinguishable via extra_configs.env). The 10-task
+    # rubric-coverage run lost 4 of 10 tasks (28, 41, 43, 48) to one shape:
+    # Fable 5.1 at max effort thinks silently for >5 min on a hard step,
+    # Claude Code's stream watchdog (300 s without an event / 180 s without a
+    # byte) aborts the stream, retries the same turn, then falls back to
+    # NON-streaming requests capped at max_tokens 64000 that die at ~11 min,
+    # and after 10 retries reports "Request timed out" with no workbook
+    # (relay trajectories: drops at 6-17 min while thinking deltas were
+    # flowing). Fable 5 streamed a delta every ~1 s and its 29-min turns
+    # survived the same stack. Settings per code.claude.com/docs/en/
+    # network-config.md and errors.md: wait through 30 min of silence (the
+    # documented cap), never take the non-streaming fallback, retry up to
+    # the 15 cap. Present in Claude Code 2.1.260; the image pins 2.1.251.
+    # The same values are now the harness default for every claude run
+    # (agents.CLAUDE_HARNESS_ENV); kept explicit here as this entry's pin.
+    CLAUDE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_BYTE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: "1"
+    CLAUDE_CODE_MAX_RETRIES: "15"
+
+# 2026-09-22: Stage 4 thinking ablation - the same Claude Code / Fable 5.1
+# harness at effort high and low. Same env pin as the max entry (the
+# stream-watchdog values are the harness default anyway). New labels, so
+# should_skip sees no banked rows and every task runs fresh.
+- agent_model_name: claudecode_anthropic/claude-fable-5-1-high
+  cli: claude
+  model: claude-fable-5-1
+  effort: high
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+    CLAUDE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_BYTE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: "1"
+    CLAUDE_CODE_MAX_RETRIES: "15"
+
+- agent_model_name: claudecode_anthropic/claude-fable-5-1-low
+  cli: claude
+  model: claude-fable-5-1
+  effort: low
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+    CLAUDE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_BYTE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: "1"
+    CLAUDE_CODE_MAX_RETRIES: "15"
+
+# 2026-09-24 (maintainer): Claude Code on Claude Opus 5 at effort max, Anthropic API direct, to
+# finish the Opus 5 coding run after TensorBlock's Opus route went 402 at 14:13 EDT with
+# 36 tasks left. A different harness from the 65 banked codex_tensorblock/claude-opus-5-max
+# rows, so a separate cohort label. Claude Code applies prompt caching itself (cache_control
+# on the system prompt and the conversation); rung 0 checks cache_read tokens. Same env pin
+# as the Opus 5.5 entry below; image v4.
+- agent_model_name: claudecode_anthropic/claude-opus-5-max
+  cli: claude
+  model: claude-opus-5
+  effort: max
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+    CLAUDE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_BYTE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: "1"
+    CLAUDE_CODE_MAX_RETRIES: "15"
+
+# ---------------------------------------------------------------------------
+# 2026-09-23: Stage 5 prompt ablation runs on Claude Opus 5.5 at max effort
+# (maintainer), in place of Fable 5.1. Live-probed the same day (GET /v1/models, free):
+#
+#   claude-opus-5-5   created 2026-09-21; max_input_tokens 1,000,000;
+#                     max_tokens 128000; effort low/medium/high/xhigh/max;
+#                     thinking adaptive only (the API rejects "disabled" and
+#                     budget_tokens at every effort). Its API default effort
+#                     is medium, so the explicit max below matters.
+#
+# Run it on image mbabench-coding-agent:v4 (Claude Code 2.1.280, Codex
+# 0.150.1 - v2 with only the Claude Code pin moved), not v2. Claude Code
+# 2.1.251 predates the model and maps any id containing "claude-opus-5" to
+# Claude Opus 5: Opus 5's prompt bundle, Opus 5 prices in total_cost_usd
+# ($5/$25 instead of $4/$20) and Opus 5's thinking_disabled_effort_cap rule,
+# where Opus 5.5 rejects disabled thinking outright. 2.1.280 has a
+# claude-opus-5-5 entry (native 1M context, 128k output, $4/$20,
+# rejects_disabled_thinking, opus_5_5_prompt_bundle); the stream-idle code
+# the env below tunes is the same in both versions. Same env pin as
+# fable-5-1-max, so the two entries differ only in model.
+#
+# 2026-09-23 (maintainer): Stage 4 re-pointed at Claude Opus 5.5 (claude-opus-5-5,
+# live on /v1/models since 2026-09-21: 1M context, 128k output, effort
+# low..max, adaptive thinking only). Three effort arms on the same Claude Code
+# harness, image and v13 prompt as the Fable 5.1 cohorts; same env pin. The
+# Fable high/low cohorts were stopped at 13/7 rows and stay as recorded.
+- agent_model_name: claudecode_anthropic/claude-opus-5-5-max
+  cli: claude
+  model: claude-opus-5-5
+  effort: max
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+    CLAUDE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_BYTE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: "1"
+    CLAUDE_CODE_MAX_RETRIES: "15"
+
+- agent_model_name: claudecode_anthropic/claude-opus-5-5-high
+  cli: claude
+  model: claude-opus-5-5
+  effort: high
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+    CLAUDE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_BYTE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: "1"
+    CLAUDE_CODE_MAX_RETRIES: "15"
+
+- agent_model_name: claudecode_anthropic/claude-opus-5-5-low
+  cli: claude
+  model: claude-opus-5-5
+  effort: low
+  extra_args: []
+  env:
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
+    API_TIMEOUT_MS: "3600000"
+    CLAUDE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_BYTE_STREAM_IDLE_TIMEOUT_MS: "1800000"
+    CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: "1"
+    CLAUDE_CODE_MAX_RETRIES: "15"
+
+- agent_model_name: codex_openai/gpt-6-astra-xhigh
+  cli: codex
+  model: gpt-6-astra
+  effort: xhigh
+  extra_args: []
+  env: {}
+
+# ---------------------------------------------------------------------------
+# 2026-09-21: Codex CLI through TensorBlock Forge, billed to Forge credits only.
+# env.TRAJ_UPSTREAM points the relay at the gateway, which makes the run use
+# keys.forge_api_key and never the OpenAI key (config.resolve_api_key) and
+# lets the container reach TensorBlock only; run on image v3 (Codex 0.155.1,
+# the Astra cohort's image). Each model gets its own ceilings, measured
+# through TensorBlock the same day (cents-level calls):
+#   - Memory: Codex does not know these ids and would give them its fallback
+#     272,000-token window (it compacts at ~245k). The mounted model catalog
+#     (docker/codex_model_catalog.json, -c model_catalog_json=...) reproduces
+#     that fallback exactly and sets each model's real window: Grok 500,000
+#     (TensorBlock took 469,751 input tokens, refused 530k), Kimi 650,000
+#     (TensorBlock took 649,757 and refused 850k and 1.02M with a 429 "rate
+#     limit, quota, or billing limit" even after a pause — its own cap, below
+#     Kimi's 1,048,576), Gemini 1,048,576 (took 1,000,532, refused 1.1M).
+#     Codex compacts at 90% of the window.
+#   - Tools: Forge's /v1/responses refuses the two non-function tools Codex
+#     adds for Grok (web_search 400, the multi_agent_v1 namespace 422). Both
+#     are off on every Forge entry so the cohorts get the same tools:
+#     exec_command, write_stdin, request_user_input, view_image,
+#     get/create/update_goal.
+#   - TRAJ_UPSTREAM_TIMEOUT 600: the relay cuts a call Forge leaves silent for
+#     10 min and Codex retries it (Codex has no timeout before a reply starts;
+#     Forge has left calls unanswered for hours). Streams stay well inside it
+#     (longest silence seen: 15 s Grok, 19 s Kimi).
+#   - Reply length: Grok has no cap on its route. Kimi and Gemini go over
+#     TensorBlock's chat route (TRAJ_WIRE=chat, docker/traj_relay.py): on
+#     /v1/responses Kimi's replies are cut at 4,096 tokens and its max tier is
+#     refused, and Gemini cannot finish a single tool call.
+- agent_model_name: codex_tensorblock/grok-4.6-xhigh
+  cli: codex
+  model: tensorblock/grok-4.6
+  # xAI's top tier, honoured on this route (one puzzle: 1.7k reasoning
+  # tokens at low, 12.8k at xhigh).
+  effort: xhigh
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false",
+               "-c", 'model_catalog_json="/etc/codex/model_catalog.json"']
+  env:
+    TRAJ_UPSTREAM: https://api.forge.tensorblock.co
+    TRAJ_UPSTREAM_TIMEOUT: "600"
+    # xAI answers 400 to every call that sends back a reasoning item carrying
+    # "content": null, which Codex writes into each one (docker/traj_relay.py).
+    TRAJ_REQUEST_FIXES: reasoning_null_content
+
+- agent_model_name: codex_tensorblock/kimi-k3-max
+  cli: codex
+  model: tensorblock/Kimi-K3
+  # Moonshot's top tier (and its default), accepted on the chat route.
+  effort: max
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false",
+               "-c", 'model_catalog_json="/etc/codex/model_catalog.json"']
+  env:
+    TRAJ_UPSTREAM: https://api.forge.tensorblock.co
+    TRAJ_UPSTREAM_TIMEOUT: "600"
+    TRAJ_WIRE: chat
+    # Kimi K3's published output limit; TensorBlock does not count it against
+    # the input (100k input + a 1,000,000 cap accepted).
+    TRAJ_CHAT_MAX_TOKENS: "943718"
+
+- agent_model_name: codex_tensorblock/gemini-3.8-flash-high
+  cli: codex
+  model: tensorblock/gemini-3.8-flash
+  # Google's top thinking level (its levels: low / medium / high, medium the
+  # default). reasoning_effort does reach Google through TensorBlock's chat
+  # route ("minimal" is refused upstream), though TensorBlock silently accepts
+  # values Google does not document, and Google's own thinking_config is
+  # refused. Same tier as the CLI cohort openpyxl_tensorblock/gemini-3.8-flash-high.
+  effort: high
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false",
+               "-c", 'model_catalog_json="/etc/codex/model_catalog.json"']
+  env:
+    TRAJ_UPSTREAM: https://api.forge.tensorblock.co
+    TRAJ_UPSTREAM_TIMEOUT: "600"
+    TRAJ_WIRE: chat
+    # Gemini 3.8 Flash's output limit (thinking included): a reply asked for
+    # more stopped at 65,536 whatever cap was sent.
+    TRAJ_CHAT_MAX_TOKENS: "65536"
+
+# 2026-09-23 (maintainer, Stage 5 prompt ablation): Codex CLI driving Claude Fable 5.1 at max effort through
+# TensorBlock Forge, billed to Forge credits. Claude Code cannot use Forge: its Anthropic route answers 405 "The
+# Claude Code API is no longer supported by Forge", so the Codex harness carries the model. Forge serves the model
+# as us.anthropic.claude-fable-5-1 (Amazon Bedrock) on its chat route; probed the same day (cents): tool calls
+# come back well-formed, reasoning_effort reaches the model (max adds hidden reasoning, low answers directly;
+# Forge does not report reasoning tokens separately), max_tokens 128000 (Fable's output limit) is accepted.
+# Chat wire (TRAJ_WIRE=chat) with the cap pinned, as for Kimi/Gemini. No model catalog on this box: Codex gives
+# the id its fallback 272,000-token window (compacts at ~245k), above the 200,000 Claude Code ran Fable with.
+# Same tools as the other Forge entries. Image v3 (Codex 0.155.1).
+- agent_model_name: codex_tensorblock/claude-fable-5-1-max
+  cli: codex
+  model: tensorblock/claude-fable-5-1
+  effort: max
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false"]
+  env:
+    TRAJ_UPSTREAM: https://api.forge.tensorblock.co
+    TRAJ_UPSTREAM_TIMEOUT: "600"
+    TRAJ_WIRE: chat
+    TRAJ_CHAT_MAX_TOKENS: "128000"
+
+# 2026-09-23 (maintainer): full 101-task run of Codex CLI driving Claude Opus 5 at max effort through TensorBlock
+# Forge, billed to Forge credits, prompt v13 (pv 113). Same harness and pins as claude-fable-5-1-max above (Claude
+# Code cannot use Forge); only the model differs. Probed the same day (cents): Forge serves it as
+# us.anthropic.claude-opus-5 (Amazon Bedrock) on the chat route, tool calls come back well-formed, max_tokens
+# 128000 is accepted, reasoning_effort reaches the model (an unknown value is refused 400; max spent 2.5x the
+# completion tokens of low on the same puzzle). Codex fallback 272,000-token window, as for Fable. Image v3.
+- agent_model_name: codex_tensorblock/claude-opus-5-max
+  cli: codex
+  model: tensorblock/claude-opus-5
+  effort: max
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false"]
+  env:
+    TRAJ_UPSTREAM: https://api.forge.tensorblock.co
+    TRAJ_UPSTREAM_TIMEOUT: "600"
+    TRAJ_WIRE: chat
+    TRAJ_CHAT_MAX_TOKENS: "128000"
+
+# 2026-09-24 (maintainer): full 101-task runs of Codex CLI driving Qwen 3.8 Max and GLM 5.3 through TensorBlock Forge,
+# billed to Forge credits, prompt v13 (pv 113), image v3 (Codex 0.155.1); the same harness as kimi-k3-max above
+# (chat wire, same tools, model catalog). Both are served by Fireworks (usage log: qwen3p8-2p4t-a95b, FW-GLM-5.3).
+# Probed through TensorBlock the same evening in the chat request shape (cents):
+#   - Tier: GLM 5.3 takes low/medium/high/xhigh/max (none, minimal and unknown values are refused 400); Z.AI
+#     documents low/high/max with max the default and the top. Qwen 3.8 takes none/low/medium/high/xhigh/max
+#     (minimal and unknown values refused); Fireworks documents low/medium/xhigh with xhigh the top (thinking
+#     budgets 4,096 / 16,384 / 262,144; low stopped at 4,109 reasoning tokens on a puzzle).
+#   - Memory: TensorBlock took 795,002 input tokens for GLM and refused ~894k (429, as for Kimi); Qwen took
+#     255,886 and refused ~268k (400) - far below its published 1M. Catalog windows 795,000 / 255,000; Codex
+#     compacts at 90% of them. A reply cap larger than what is left of the window is accepted (not counted
+#     against the input), as for Kimi.
+#   - Caching: automatic. Each call's history extends the previous call's prompt, and the next call read
+#     all of it back as cached (12 of 12 two-call trials per model, with or without a cache key).
+#   - Reply cap: each maker's published output limit (Qwen 131,072 per Alibaba; GLM 943,718 per Fireworks).
+- agent_model_name: codex_tensorblock/qwen3.8-max-xhigh
+  cli: codex
+  model: tensorblock/qwen3.8-max
+  effort: xhigh
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false",
+               "-c", 'model_catalog_json="/etc/codex/model_catalog.json"']
+  env:
+    TRAJ_UPSTREAM: https://api.forge.tensorblock.co
+    TRAJ_UPSTREAM_TIMEOUT: "600"
+    TRAJ_WIRE: chat
+    TRAJ_CHAT_MAX_TOKENS: "131072"
+    # 2026-09-25 (attempts started from 01:05 EDT on): TensorBlock answered GLM with bursts of 429 "provider rate limit" at
+    # ~8 GLM lanes; the relay's default 8 retries give up after ~5 min and Codex then ends the attempt on
+    # the 429. 60 retries (60 s apart after the first few) ride out an hour, as the cli pipeline does.
+    TRAJ_RETRY_429_MAX: "60"
+
+- agent_model_name: codex_tensorblock/glm-5.3-max
+  cli: codex
+  model: tensorblock/glm-5.3
+  effort: max
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false",
+               "-c", 'model_catalog_json="/etc/codex/model_catalog.json"']
+  env:
+    TRAJ_UPSTREAM: https://api.forge.tensorblock.co
+    TRAJ_UPSTREAM_TIMEOUT: "600"
+    TRAJ_WIRE: chat
+    TRAJ_CHAT_MAX_TOKENS: "943718"
+    # 2026-09-25 (attempts started from 01:05 EDT on): TensorBlock answered GLM with bursts of 429 "provider rate limit" at
+    # ~8 GLM lanes; the relay's default 8 retries give up after ~5 min and Codex then ends the attempt on
+    # the 429. 60 retries (60 s apart after the first few) ride out an hour, as the cli pipeline does.
+    TRAJ_RETRY_429_MAX: "60"

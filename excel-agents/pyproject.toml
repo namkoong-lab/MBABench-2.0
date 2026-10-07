@@ -1,0 +1,23 @@
+[project]
+name = "excel-agents"
+version = "0.1.0"
+description = "Excel Online add-in automation: drives the Claude and ChatGPT add-ins inside a real Microsoft 365 Excel session"
+requires-python = ">=3.12"
+
+dependencies = [
+    # Browser automation — drives system Chrome over CDP.
+    "playwright>=1.54.0",
+    "pyyaml>=6.0.2",
+    "openpyxl>=3.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+# Flat layout with several non-package top-level directories (tasks_configs/,
+# scripts/, tests/, scratch dirs...). Entry points reach these packages via
+# their own `sys.path.insert(0, <repo root>)`; the install just makes them
+# resolvable.
+[tool.setuptools.packages.find]
+include = ["infra*", "task_io*", "excel_agent*"]

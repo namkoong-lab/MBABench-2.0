@@ -1,0 +1,374 @@
+# Alternate accepted answers for the harness answer check (judge v14).
+#
+# Source: the task author's "Amb Answers.xlsx" (received 2026-10-06): for seven
+# tasks some Questions-sheet questions have TWO acceptable answers. "golden" is
+# the value the golden workbook holds (Answer 1, recorded for reading only);
+# "alternate" is the second accepted value (Answer 2). utils/answer_check.py
+# accepts an attempt that matches EITHER under the same equivalence rules; the
+# alternate is applied only when the golden question's text matches "label"
+# (whitespace/case-insensitive), so a re-ordered golden cannot mis-key it. A
+# constant typed in place of a formula is still hardcoded, whichever value.
+#
+# Keyed by tasks.id (DB). Questions not listed have one answer.
+tasks:
+  41:
+    task_name: PastaInc
+    questions:
+    - qid: 1
+      label: What is the amount for/of Change in (Income) Tax Payable in 6/2035?
+      golden: -147071526.49
+      alternate: 997024.16
+    - qid: 3
+      label: What is the amount for/of Other production costs in 5/2031?
+      golden: 553077.54
+      alternate: 420314.39
+    - qid: 4
+      label: What is the amount for/of Raw material in 7/2029?
+      golden: 9005752.79
+      alternate: 8852998.63
+    - qid: 6
+      label: What is the amount for/of Inventory - Finished goods in 10/2028?
+      golden: 1182267.22
+      alternate: 1427506.13
+    - qid: 8
+      label: What is the amount for/of Change in (Income) Tax Payable in 8/2029?
+      golden: -305489.87
+      alternate: 506719.03
+    - qid: 9
+      label: What is the amount for/of Inventory - Raw materials in 2/2035?
+      golden: 6203556.31
+      alternate: 6726325.46
+    - qid: 10
+      label: What is the amount for/of Inventory - Finished goods in 9/2036?
+      golden: 5766116.41
+      alternate: 4818565.92
+    - qid: 12
+      label: What is the amount for/of Inventory - Finished goods in 8/2028?
+      golden: 1858176.49
+      alternate: 1975480.02
+    - qid: 13
+      label: What is the amount for/of Raw material in 10/2034?
+      golden: 9538208.77
+      alternate: 11602739.57
+    - qid: 15
+      label: What is the amount for/of Retained Earnings in 9/2027?
+      golden: -10908568.77
+      alternate: -5253078.67
+    - qid: 16
+      label: What is the amount for/of Profit distributions in 3/2029?
+      golden: 0.0
+      alternate: -1257616.05
+    - qid: 21
+      label: What is the amount for/of Tax Payable in 2/2033?
+      golden: -130710671.05
+      alternate: 5838907.97
+    - qid: 23
+      label: What is the amount for/of Energy in 9/2036?
+      golden: 2577157.19
+      alternate: 2142455.23
+    - qid: 24
+      label: What is the amount for/of Opening Cash in 7/2029?
+      golden: -39033942.11
+      alternate: -5151474.59
+    - qid: 25
+      label: What is the amount for/of Inventory - WIP in 8/2037?
+      golden: 522895.16
+      alternate: 557356.45
+  50:
+    task_name: RoadtoZero
+    questions:
+    - qid: 7
+      label: What will the Interest be on 02/01/2032?
+      golden: 287.82
+      alternate: 294.08
+    - qid: 8
+      label: What will the Interest be on 04/01/2032?
+      golden: 275.31
+      alternate: 281.57
+    - qid: 9
+      label: What will the Interest be on 04/01/2033?
+      golden: 200.22
+      alternate: 206.48
+    - qid: 10
+      label: What will the Interest be on 11/01/2027?
+      golden: 606.93
+      alternate: 613.19
+    - qid: 11
+      label: What will the Interest be on 11/01/2032?
+      golden: 231.51
+      alternate: 237.77
+    - qid: 12
+      label: What will the Payment Due be on 02/01/2026?
+      golden: 2238.33
+      alternate: 2244.58
+    - qid: 13
+      label: What will the Payment Due be on 03/01/2034?
+      golden: 1631.4
+      alternate: 1637.65
+    - qid: 14
+      label: What will the Payment Due be on 05/01/2027?
+      golden: 2144.47
+      alternate: 2150.73
+    - qid: 15
+      label: What will the Payment Due be on 09/01/2029?
+      golden: 1969.28
+      alternate: 1975.53
+    - qid: 16
+      label: What will the Payment Due be on 12/01/2032?
+      golden: 1725.25
+      alternate: 1731.51
+    - qid: 21
+      label: What will the total Interest be in the year 2027?
+      golden: 7621.04
+      alternate: 7696.12
+    - qid: 22
+      label: What will the total Interest be in the year 2028?
+      golden: 6720.03
+      alternate: 6795.11
+    - qid: 23
+      label: What will the total Interest be in the year 2033?
+      golden: 2214.98
+      alternate: 2290.07
+  59:
+    task_name: Telecom
+    questions:
+    - qid: 13
+      label: What is the NAV per Share in 2022?
+      golden: 28.15
+      alternate: 8.12
+    - qid: 14
+      label: What is the NAV per Share in 2023?
+      golden: 30.27
+      alternate: 9.77
+    - qid: 15
+      label: What is the NAV per Share in 2024?
+      golden: 32.73
+      alternate: 11.43
+    - qid: 16
+      label: What is the NAV per Share in 2025?
+      golden: 35.64
+      alternate: 13.61
+    - qid: 17
+      label: What is the NAV per Share in 2026?
+      golden: 43.71
+      alternate: 20.89
+    - qid: 18
+      label: What is the NAV per Share in 2027?
+      golden: 57.48
+      alternate: 34.08
+  60:
+    task_name: TheInterestGame
+    questions:
+    - qid: 1
+      label: What will the Balance be on 01/01/2034?
+      golden: 115543.69
+      alternate: 114971.68
+    - qid: 2
+      label: What will the Balance be on 04/01/2028?
+      golden: 203549.66
+      alternate: 202541.97
+    - qid: 3
+      label: What will the Balance be on 08/01/2028?
+      golden: 199228.88
+      alternate: 198242.59
+    - qid: 4
+      label: What will the Balance be on 12/01/2032?
+      golden: 134506.88
+      alternate: 133841.0
+    - qid: 5
+      label: What will the Interest be on 01/01/2035?
+      golden: 479.81
+      alternate: 487.7
+    - qid: 6
+      label: What will the Interest be on 05/01/2038?
+      golden: 129.62
+      alternate: 139.25
+    - qid: 7
+      label: What will the Interest be on 08/01/2031?
+      golden: 773.42
+      alternate: 779.86
+    - qid: 13
+      label: What will the Principal Amount be on 01/01/2037?
+      golden: 1796.46
+      alternate: 1787.57
+    - qid: 14
+      label: What will the Principal Amount be on 02/01/2034?
+      golden: 1510.01
+      alternate: 1502.54
+    - qid: 15
+      label: What will the Principal Amount be on 05/01/2038?
+      golden: 1944.93
+      alternate: 1935.3
+    - qid: 16
+      label: What will the Principal Amount be on 06/01/2030?
+      golden: 1213.8
+      alternate: 1207.79
+    - qid: 17
+      label: What will the Principal Amount be on 06/01/2035?
+      golden: 1634.81
+      alternate: 1626.71
+    - qid: 18
+      label: What will the Principal Amount be on 09/01/2028?
+      golden: 1093.66
+      alternate: 1088.25
+    - qid: 19
+      label: What will the Principal Amount be on 11/01/2032?
+      golden: 1401.69
+      alternate: 1394.75
+    - qid: 20
+      label: What will the Principal Amount be on 12/01/2036?
+      golden: 1787.57
+      alternate: 1778.72
+    - qid: 21
+      label: What will the total Interest be in the year 2038?
+      golden: 1377.57
+      alternate: 1493.99
+    - qid: 23
+      label: What will the total Principal Amount be in the year 2028?
+      golden: 12964.02
+      alternate: 12899.84
+    - qid: 24
+      label: What will the total Principal Amount be in the year 2032?
+      golden: 16451.16
+      alternate: 16369.71
+    - qid: 25
+      label: What will the total Principal Amount be in the year 2037?
+      golden: 22157.32
+      alternate: 22047.63
+  61:
+    task_name: TheLiquidityEngine
+    questions:
+    - qid: 1
+      label: What is the amount for Accounts Receivable, Net in the year 2030?
+      golden: 4958.05
+      alternate: 4986.89
+    - qid: 2
+      label: What is the amount for Accounts Receivable, Net in the year 2032?
+      golden: 5270.56
+      alternate: 5327.55
+    - qid: 3
+      label: What is the amount for Accounts Receivable, Net in the year 2034?
+      golden: 5625.16
+      alternate: 5681.72
+    - qid: 8
+      label: What is the amount for Net Working Capital in the year 2027?
+      golden: 4609.68
+      alternate: 4598.99
+    - qid: 10
+      label: What is the amount for Net Working Capital in the year 2031?
+      golden: 5242.81
+      alternate: 5205.3
+    - qid: 11
+      label: What is the amount for Net Working Capital in the year 2032?
+      golden: 5175.5
+      alternate: 5229.6
+    - qid: 13
+      label: What is the amount for Operating Net Working Capital in the year 2026?
+      golden: 2738.52
+      alternate: 2741.25
+    - qid: 19
+      label: What is the amount for Total Current Assets in the year 2028?
+      golden: 15116.34
+      alternate: 15162.86
+    - qid: 20
+      label: What is the amount for Total Current Liabilities in the year 2029?
+      golden: 11059.45
+      alternate: 11027.61
+    - qid: 22
+      label: 'How many days is the metric: Days Inventory Outstanding (DIO) in  the year 2025?'
+      golden: 129.13
+      alternate: 128.98
+    - qid: 24
+      label: 'How many days is the metric: Days Payable Outstanding (DPO) in  the year 2024?'
+      golden: 136.36
+      alternate: 135.99
+    - qid: 25
+      label: 'How many days is the metric: Days Payable Outstanding (DPO) in  the year 2028?'
+      golden: 136.19
+      alternate: 136.04
+    - qid: 27
+      label: 'How many days is the metric: Days Sales Outstanding (DSO) in  the year 2020?'
+      golden: 69.65
+      alternate: 69.46
+  64:
+    task_name: ThePayoffPlan
+    questions:
+    - qid: 1
+      label: What will the Balance be on 03/01/2018?
+      golden: 111121.0
+      alternate: 110772.5
+    - qid: 2
+      label: What will the Balance be on 06/15/2016?
+      golden: 148876.94
+      alternate: 148410.03
+    - qid: 3
+      label: What will the Balance be on 06/15/2018?
+      golden: 104174.78
+      alternate: 103848.06
+    - qid: 4
+      label: What will the Balance be on 10/01/2011?
+      golden: 230952.72
+      alternate: 230228.4
+    - qid: 5
+      label: What will the Interest be on 04/15/2012?
+      golden: 699.14
+      alternate: 701.11
+    - qid: 6
+      label: What will the Interest be on 04/15/2017?
+      golden: 411.05
+      alternate: 413.93
+    - qid: 7
+      label: What will the Interest be on 08/15/2017?
+      golden: 387.71
+      alternate: 390.66
+    - qid: 8
+      label: What will the Interest be on 12/15/2010?
+      golden: 759.32
+      alternate: 761.1
+    - qid: 14
+      label: What will the Principal Amount be on 04/01/2012?
+      golden: 627.29
+      alternate: 625.33
+    - qid: 15
+      label: What will the Principal Amount be on 05/01/2012?
+      golden: 631.25
+      alternate: 629.27
+    - qid: 16
+      label: What will the Principal Amount be on 06/01/2015?
+      golden: 796.43
+      alternate: 793.93
+    - qid: 17
+      label: What will the Principal Amount be on 06/15/2019?
+      golden: 1080.13
+      alternate: 1076.74
+    - qid: 18
+      label: What will the Principal Amount be on 07/15/2018?
+      golden: 1008.01
+      alternate: 1004.84
+    - qid: 19
+      label: What will the Principal Amount be on 09/01/2013?
+      golden: 698.0
+      alternate: 695.81
+    - qid: 20
+      label: What will the Principal Amount be on 09/15/2013?
+      golden: 700.19
+      alternate: 698.0
+    - qid: 21
+      label: What will the total Interest be in the year 2015?
+      golden: 12672.61
+      alternate: 12732.85
+    - qid: 22
+      label: What will the total Interest be in the year 2016?
+      golden: 11168.49
+      alternate: 11233.45
+    - qid: 25
+      label: What will the total Principal Amount be in the year 2017?
+      golden: 22335.21
+      alternate: 22265.17
+  86:
+    task_name: HouseorFlat
+    questions:
+    - qid: 38
+      label: What will the Home value (net) be for 1-2042?
+      golden: 2314882.35
+      alternate: 1956123.74

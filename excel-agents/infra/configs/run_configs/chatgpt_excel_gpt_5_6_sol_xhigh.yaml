@@ -1,0 +1,52 @@
+# Excel add-in cohort `chatgpt_excel_gpt_5_6_sol_xhigh` — the ChatGPT add-in
+# inside Excel Online, "Model and thinking effort" menu: model "GPT-5.6 Sol",
+# thinking effort "Extra High". agent_model_name is the ONLY model-selecting
+# key: agent_identities.yaml pins the rest for this label (provider
+# chatgpt_excel_agent, ui_model_label "GPT-5.6 Sol", thinking_effort "Extra
+# High"). Setting any of those here refuses to run.
+#
+# Tasks are read from <data_root>/tasks/ (scripts/download_dataset.py) and every
+# attempt is written under <output_root>/attempts/chatgpt_excel_gpt_5_6_sol_xhigh/
+# (both roots: config/config.yaml local.*, or MBABENCH_DATA_ROOT /
+# MBABENCH_OUTPUT_ROOT).
+#
+# One-time setup (from excel-agents/):
+#   scripts/setup_chrome.sh                                 # Chrome on browser.cdp_port; sign in to Microsoft 365
+#   uv run python scripts/provision_onedrive.py --dry-run   # then without --dry-run (or --stage for a manual drag)
+# Run:
+#   uv run python -m infra.run --dry-run --run-config infra/configs/run_configs/chatgpt_excel_gpt_5_6_sol_xhigh.yaml
+#   uv run python -m infra.run -y        --run-config infra/configs/run_configs/chatgpt_excel_gpt_5_6_sol_xhigh.yaml
+#   uv run python -m infra.run -y --task-id 7 --run-config ...     # one task
+# Re-running resumes: skip_already_attempted skips every task that already has
+# a successful row in attempts/chatgpt_excel_gpt_5_6_sol_xhigh/task_attempts.jsonl.
+# Machine-specific values (browser.cdp_port, browser.profile_dir,
+# onedrive_base_path) belong in the gitignored infra/configs/configs.yaml.
+
+agent_model_name: chatgpt_excel_gpt_5_6_sol_xhigh
+
+# House Standards single-pass prompt (tasks_configs/prompts/v2_3.txt) with
+# ../house_standards/House_Standards_v1.md uploaded into the panel after the
+# case files — both selected by the version. 0 = the cheap smoke-test prompt.
+prompt_version: 205
+
+source:
+  kind: bundle                 # <data_root>/tasks/task_id=<N>/task.json + starting_files/
+  filters:
+    task_ids: []               # [] = every task present (1-101); or e.g. [1, 2, 3]
+    skip_already_attempted: true
+
+sink:
+  kind: local                  # <output_root>/attempts/<label>/task_id=<N>/<ts>/ + task_attempts.jsonl
+
+# Engine settings — the pipeline defaults, pinned here so the run is
+# reproducible from this file alone.
+chatgpt_excel_agent:
+  apply_edits_automatically: true        # the add-in's "Apply edits automatically" switch, verified after setup
+  max_sec_per_task: 7200                 # 2h wall clock per task
+  max_wait_per_prompt_seconds: 7200
+  check_interval_seconds: 2
+  panel_boot_timeout_seconds: 30
+
+runner:
+  max_infra_tries: 3
+  sleep_between_retries: 20

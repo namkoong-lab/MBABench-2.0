@@ -1,0 +1,41 @@
+# GUI cohort `claude_fable_5_1_cowork_max` — claude.ai, Cowork surface, model
+# "Fable 5.1", Effort "Max". The identity label is DERIVED from the three
+# claude_web axes below by infra/configs/agent_identity.py; nothing here names it.
+#
+# Tasks are read from <data_root>/tasks/ (scripts/download_dataset.py) and every
+# attempt is written under <output_root>/attempts/claude_fable_5_1_cowork_max/
+# (both roots: config/config.yaml local.*, or MBABENCH_DATA_ROOT /
+# MBABENCH_OUTPUT_ROOT). Chrome must be running on browser.cdp_port with the
+# claude.ai login in browser.profile_dir (see the root README); put machine-
+# specific values in the gitignored infra/configs/configs.yaml, not here.
+#
+# Run (from gui-agents/):
+#   uv run python -m infra.run --dry-run --run-config infra/configs/run_configs/claude_cowork_fable_5_1_max.yaml
+#   uv run python -m infra.run -y        --run-config infra/configs/run_configs/claude_cowork_fable_5_1_max.yaml
+#   uv run python -m infra.run -y --task-id 7 --run-config ...     # one task
+# Re-running resumes: skip_already_attempted skips every task that already has
+# a successful row in attempts/claude_fable_5_1_cowork_max/task_attempts.jsonl.
+
+source:
+  kind: bundle                       # <data_root>/tasks/task_id=<N>/task.json
+  filters:
+    task_ids: []                     # [] = every task present (1-101); or e.g. [1, 2, 3]
+    skip_already_attempted: true     # resume: successful local rows are skipped
+
+sink:
+  kind: local                        # <output_root>/attempts/<label>/task_id=<N>/<ts>/ + task_attempts.jsonl
+
+# House Standards single-pass prompt (tasks_configs/prompts/v2_3.txt) with
+# ../house_standards/House_Standards_v1.md uploaded after the case files —
+# both selected by the version. 0 = the cheap plumbing smoke-test prompt.
+prompt_version: 205
+
+provider:
+  kind: "claude"
+
+claude_web:
+  mode: "cowork"                     # cowork surface, actions auto-approved
+  cowork_approval: "auto"
+  model: "fable_5_1"                 # claude.ai radio "Fable 5.1"
+  effort: "max"                      # Effort flyout: Max
+  project_id: null                   # no project scope

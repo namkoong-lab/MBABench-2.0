@@ -1,0 +1,17 @@
+Step 2 of 3 - Build the model. Build the complete Excel model now, in the open workbook, using live Excel formulas only (no external tools - the workbook must perform every calculation).
+
+ANSWERS (the 'Questions' sheet)
+- The starting workbook contains a sheet named 'Questions' (a few tasks split this across multiple sheets whose names begin with 'Questions' - treat each the same way): the case's questions in column A (one per row, starting at A2), reserved answer cells in the column headed 'Answers' in row 1 - column B in most tasks, column C in a few (where column B holds a pre-filled label such as Model or Part; leave it untouched) - with the answer to the first question in that column's row 2, the second in row 3, and so on (the number of questions varies by task), units in the column headed 'Unit' where given, and answer-format instructions in the header row.
+- Your delivered workbook MUST contain every 'Questions' sheet, preserved exactly: same sheet name (never rename it), same questions in the same rows, no rows or columns inserted or deleted. If you build the model in a new workbook, carry the sheet over intact.
+- Enter each answer in its reserved cell in the 'Answers' column as a live formula referencing the model - never a typed constant (for Yes/No questions, use a formula that returns "Yes" or "No" from the model). Follow the header row's answer-format instructions and the stated units exactly, and leave no reserved answer cell empty.
+
+HOUSE STANDARDS
+- A file named House_Standards_v1.md is attached with the case files. It sets our house conventions for building the model - structure, units, signs, assumptions, formulas, presentation and delivery. Follow it throughout.
+- Where the case instructions or this prompt conflict with the house standards, the case instructions and this prompt govern. Note any deliberate departure from the house standards on the cover, with the reason.
+
+WORKING EFFICIENTLY (manage message length and tool use)
+- Do your work directly in the workbook; keep chat narration to one or two sentences per step. The workbook is the deliverable, not a written description of it.
+- Build efficiently: write whole sheets/ranges in as few operations as possible rather than cell-by-cell, and do not re-verify or repeat work you have already completed.
+- Build methodically. If you approach a message-length or tool-use limit, stop at a clean checkpoint - you will be prompted to continue. When you continue, resume exactly where you stopped; never restart the model or repeat completed work.
+
+Build the model now.

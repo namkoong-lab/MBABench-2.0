@@ -1,0 +1,35 @@
+You are an expert financial-modeling agent building an Excel solution for the attached case. Complete the entire task in a single, uninterrupted pass - do not stop for confirmation, do not ask clarifying questions, and do not split the work into separately-acknowledged phases.
+
+Your only tool for solving this is the Excel workbook itself: build every calculation as a live Excel formula in the open workbook plus any attached files. Do not use a code interpreter, calculator, or any external/internal tool to compute answers - the workbook must perform all calculations.
+
+Deliver ONE final workbook containing the following, built in order within the same execution:
+
+1. 'Summary' sheet - a brief written analysis, written before you build, covering:
+   a. Task type - which financial model is required (e.g., 3-Statement, DCF, LBO, Valuation, Project Finance, Working Capital).
+   b. The primary question(s) to answer and every deliverable the case requires.
+   c. All given inputs and assumptions, with their values and units.
+   d. Your build plan - the tabs you will create, in order, and the calculation flow / key drivers.
+   This sheet must auto-update from the model - no hardcoded results.
+
+2. Model sheet(s) - the complete working model, using live Excel formulas for every calculated value.
+
+3. 'Questions' sheet answers - the starting workbook contains a sheet named 'Questions' (a few tasks split this across multiple sheets whose names begin with 'Questions' - treat each the same way): the case's questions in column A (one per row, starting at A2), reserved answer cells in the column headed 'Answers' in row 1 - column B in most tasks, column C in a few (where column B holds a pre-filled label such as Model or Part; leave it untouched) - with the answer to the first question in that column's row 2, the second in row 3, and so on (the number of questions varies by task), units in the column headed 'Unit' where given, and answer-format instructions in the header row. Preserve every such sheet exactly - same sheet name (never rename it), same questions in the same rows, no rows or columns inserted or deleted; if you build the model in a new workbook, carry the sheet over intact. Enter each answer in its reserved cell in the 'Answers' column as a live formula reference back to the model - never a typed constant (for Yes/No questions, use a formula that returns "Yes" or "No" from the model). Follow the header row's answer-format instructions and the stated units exactly, and leave no reserved answer cell empty.
+
+HOUSE STANDARDS
+- A file named House_Standards_v1.md is attached with the case files. It sets our house conventions for building the model - structure, units, signs, assumptions, formulas, presentation and delivery. Read it before you build and follow it throughout.
+- Where the case instructions or this prompt conflict with the house standards, the case instructions and this prompt govern. Note any deliberate departure from the house standards on the cover, with the reason.
+
+WORKING EFFICIENTLY (manage message length and tool use)
+- Do your work directly in the workbook; keep chat narration to one or two sentences per step. The workbook is the deliverable, not a written description of it.
+- Build efficiently: write whole sheets/ranges in as few operations as possible rather than cell-by-cell, and do not re-verify or repeat work you have already completed.
+- Build methodically. If you approach a message-length or tool-use limit, stop at a clean checkpoint - you will be prompted to continue. When you continue, resume exactly where you stopped; never restart the model or repeat completed work, and never treat the interruption as a reason to skip the verify-and-deliver step below.
+
+VERIFY AND DELIVER (do this yourself, in the same pass, before you deliver)
+1. The workbook opens without errors or repair warnings, and every calculated value is a live Excel formula, not a typed constant.
+2. The 'Questions' sheet is intact - same name, same questions in the same rows (each such sheet, where a task has more than one) - and every reserved answer cell in the column headed 'Answers' (row 2 down, one per question; column B in most tasks, column C in a few) contains a live formula referencing the model whose result follows the header row's answer-format instructions and the 'Unit' column where given. No reserved answer cell is empty or hard-coded.
+3. The workbook follows House_Standards_v1.md wherever the case instructions and this prompt do not say otherwise, and any deliberate departure from it is noted on the cover with the reason.
+Fix everything you find.
+
+Execute all of the above in one continuous pass. You MUST return the completed model as an actual, downloadable .xlsx file - the .xlsx workbook itself is the deliverable, NOT a text summary, description, or list of steps. Do not reply with only instructions or a plan; build the workbook and provide the finished .xlsx file for download.
+
+Build the model now.

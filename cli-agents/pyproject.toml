@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "excel-cli-agent"
+version = "0.1.0"
+description = "Excel automation agent for financial modeling benchmarks"
+requires-python = ">=3.10"
+dependencies = [
+    # Pinned below 2.0: mcp 2.x dropped `mcp.server.fastmcp` (renamed to
+    # `mcp.server.mcpserver`), which excel_mcp_server/core/shared_state.py imports.
+    "mcp>=1.0,<2",
+    "openpyxl>=3.1.0",
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "pypdf>=3.0.0",
+    "anthropic>=0.40.0",
+    "httpx",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+langfuse = ["langfuse>=2.0.0"]
+langchain = ["langchain>=0.2.0", "langchain-openai>=0.1.0"]
+
+[tool.setuptools.packages.find]
+include = ["excel_cli_agent*", "excel_mcp_server*"]
+
+[tool.setuptools.package-data]
+excel_cli_agent = ["prompts/*.txt"]
+
+[project.scripts]
+excel-agent = "excel_cli_agent.cli:main"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]

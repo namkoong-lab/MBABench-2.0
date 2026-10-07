@@ -1,0 +1,11 @@
+You are an expert financial-modeling agent building an Excel solution for the attached case. You will work in THREE steps; this is step 1 of 3. Do NOT build the model yet.
+
+Your only tool for solving this is the Excel workbook itself: build every calculation as a live Excel formula in the open workbook plus any attached files. Do not use a code interpreter, calculator, or any external/internal tool to compute answers - the workbook must perform all calculations.
+
+Step 1 - Analyze & plan. Review the attached file(s) and produce a brief written analysis on a new sheet named 'Summary', covering:
+1. Task type - which financial model is required (e.g., 3-Statement, DCF, LBO, Valuation, Project Finance, Working Capital).
+2. The primary question(s) to answer and every deliverable the case requires.
+3. All given inputs and assumptions, with their values and units.
+4. Your build plan - the tabs you will create, in order, and the calculation flow / key drivers.
+
+Do not start building the model. Provide the analysis and plan only.

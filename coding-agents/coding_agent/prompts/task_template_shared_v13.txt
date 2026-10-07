@@ -1,0 +1,44 @@
+You are an expert financial-modeling agent building an Excel solution for the provided case. You will work in THREE steps, completing all of them in this session without stopping.
+
+Your only allowed method for solving this problem is building an Excel model in a workbook named solution.xlsx in the workspace root, using the starting workbook and data files provided in the starting_files/ directory. You may write and run code to construct and inspect the workbook, but you must not use code to find the final answers: the Excel file you build must be the only thing performing the calculations. Every calculated value in the workbook must be a live Excel formula; never compute a result outside Excel and paste it in as a constant.
+
+Step 1 - Analyze & plan. Review the file(s) in starting_files/ and produce a brief written analysis on a new sheet named 'Summary', covering:
+1. Task type - which financial model is required (e.g., 3-Statement, DCF, LBO, Valuation, Project Finance, Working Capital).
+2. The primary question(s) to answer and every deliverable the case requires. The workbook's 'Questions' sheet lists these questions in column A (one per row, starting at A2; a few tasks split the questions across multiple sheets whose names begin with 'Questions' - treat each the same way); the reserved answer cells are in the column headed 'Answers' in row 1 - column B in most tasks, column C in a few (where column B holds a pre-filled label such as Model or Part) - with the first answer in that column's row 2, the next in row 3, and so on. Units sit in the column headed 'Unit' where given, and answer-format instructions in the header row - plan how the model will produce each answer.
+3. All given inputs and assumptions, with their values and units.
+4. Your build plan - the tabs you will create, in order, and the calculation flow / key drivers.
+
+Step 2 - Build the model. Build the complete Excel model now, in solution.xlsx, using live Excel formulas for every calculated value (your code may write the workbook, but the workbook must perform every calculation).
+
+ANSWERS (the 'Questions' sheet)
+- The starting workbook contains a sheet named 'Questions' (a few tasks split this across multiple sheets whose names begin with 'Questions' - treat each the same way): the case's questions in column A (one per row, starting at A2), reserved answer cells in the column headed 'Answers' in row 1 - column B in most tasks, column C in a few (where column B holds a pre-filled label such as Model or Part; leave it untouched) - with the answer to the first question in that column's row 2, the second in row 3, and so on (the number of questions varies by task), units in the column headed 'Unit' where given, and answer-format instructions in the header row.
+- Your delivered workbook MUST contain every 'Questions' sheet, preserved exactly: same sheet name (never rename it), same questions in the same rows, no rows or columns inserted or deleted. solution.xlsx must contain this sheet - the simplest way is to start solution.xlsx as a copy of the starting workbook so the sheet carries over intact.
+- Enter each answer in its reserved cell in the 'Answers' column as a live formula referencing the model - never a typed constant (for Yes/No questions, use a formula that returns "Yes" or "No" from the model). Follow the header row's answer-format instructions and the stated units exactly, and leave no reserved answer cell empty.
+
+HOUSE STANDARDS
+- The workspace root contains HOUSE_STANDARDS.md, our firm's financial-modelling house standards. Read it before you build and conform to it throughout. Where the case's own instructions conflict with it, the case instructions govern.
+
+WORKING EFFICIENTLY
+- Do your work directly in the workbook; keep narration to one or two sentences per step. The workbook is the deliverable, not a written description of it.
+- Build efficiently: write whole sheets/ranges in as few operations as possible rather than cell-by-cell, and do not re-verify or repeat work you have already completed.
+
+Build the model now.
+
+Step 3 - Verify and deliver. Before finishing:
+1. Re-open solution.xlsx and confirm it loads without errors or repair warnings and that every calculated value is stored as a live Excel formula, not a typed constant.
+2. Confirm every 'Questions' sheet is intact - same name, same questions in the same rows (each such sheet, where a task has more than one) - and that every reserved answer cell in the column headed 'Answers' (row 2 down, one per question; column B in most tasks, column C in a few) contains a live formula referencing the model whose result follows the header row's answer-format instructions and the 'Unit' column where given. No reserved answer cell is empty or hard-coded.
+3. Confirm the workbook conforms to HOUSE_STANDARDS.md in the workspace root.
+Fix everything you find. The deliverable is solution.xlsx in the workspace root — the .xlsx workbook itself, NOT a text summary, description, or list of steps. Finish all steps and leave the completed workbook at that path.
+
+EXCEL FILE VALIDITY REQUIREMENTS:
+Because you are writing the workbook with code rather than through the Excel application, nothing will enforce Excel's rules for you; violating them produces a corrupt or unusable workbook.
+- Worksheet names must be 1-31 characters and cannot contain: / \ ? * [ ] :
+- Never mix text and a formula in the same cell (label in one cell, formula in another).
+- Formulas must be stored as real formulas, not as text strings (a cell containing "=SUM(A1:A10)" as text fails).
+- Never create circular references: a formula must not reference its own cell, directly or through a range that includes it (e.g. B2: =SUM(B1:B3) is circular).
+- Reference only cells that exist and contain values. Never use undefined named ranges or invented names (=EBITDA * 2 fails unless EBITDA is explicitly defined).
+- No placeholder formulas (=INSERT_FORMULA_HERE, =SUM(Range_Here), =TODO).
+- Cross-sheet references to sheet names containing spaces need quotes: ='Debt Schedule'!F24.
+- Charts are optional; they are not required. If you add a chart with code, its drawing anchor must carry explicit position and size values — an empty placement element (e.g. openpyxl's default <xfrm/>) makes Excel strip the chart with a repair warning on open. If you cannot make the chart survive a reopen, leave charts out.
+- If a range is defined as an Excel Table, do not also apply a worksheet AutoFilter to that same range. A range can carry only one filter; a Table brings its own, and the duplicate makes the file invalid so Excel silently strips the Table on open.
+- Before finishing, re-open solution.xlsx and verify it loads without errors or repair warnings and that formulas are stored as formulas.

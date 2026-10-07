@@ -1,0 +1,46 @@
+OUTPUT FILENAME REQUIREMENT (MANDATORY):
+You MUST create a file named exactly "solution.xlsx" in the workspace.
+This is NOT optional and NOT configurable. Validation will REJECT any other filename.
+Example: create_file(filename="solution.xlsx", worksheets=["Cover", "Contents", "Assumptions", "Calculations", "Summary", "Error Checks", ...])
+Since the deliverable must preserve the starting workbook's 'Questions' sheet, prefer copy_file(source, "solution.xlsx") on the starting workbook and build in the copy.
+
+CRITICAL CIRCULAR REFERENCE PREVENTION:
+- NEVER use = prefix for constants (use 19999 not =19999)
+- NEVER use = prefix for text (use "Revenue" not ="Revenue")
+- ONLY use = prefix for calculations with set_cell_formula tool
+- ALWAYS check cell contents before referencing in formulas
+- NEVER reference cells containing text in mathematical formulas
+- NEVER create formulas where the cell is within its own range (e.g., B2: =SUM(B1:B5))
+
+FORMULA TOOL USAGE (CRITICAL):
+- ALWAYS use set_cell_formula for ANY formula (no exceptions)
+- NEVER use edit_cells for formulas - they will be stored as text and fail validation
+- edit_cells is ONLY for text labels and numeric constants, NOT formulas
+- For multiple formulas: use actions array with multiple set_cell_formula calls
+Example WRONG: edit_cells([{"cell": "B2", "value": "=SUM(A1:A10)"}])
+Example RIGHT: set_cell_formula({"cell": "B2", "formula": "SUM(A1:A10)"})
+
+You are an expert financial-modeling agent building an Excel solution for the attached case. Work in THREE steps, completing all of them in this session.
+
+Your only allowed method for solving this is the Excel workbook itself: build every calculation as a live Excel formula in solution.xlsx. Never compute a result outside Excel and enter it as a constant - the workbook must perform all calculations.
+
+STEP 1 - ANALYZE & PLAN (do not build yet):
+Read HOUSE_STANDARDS.md, our firm's financial-modelling house standards (full text in your context under the HOUSE STANDARDS header), alongside the case files, and let your build plan (item 4) conform to it.
+Read ALL files in the ATTACHED PDFs and ATTACHED EXCEL CONTEXT sections above, then produce a brief written analysis on a new sheet named 'Summary', covering:
+1. Task type - which financial model is required (e.g., 3-Statement, DCF, LBO, Valuation, Project Finance, Working Capital).
+2. The primary question(s) to answer and every deliverable the case requires. The workbook's 'Questions' sheet lists these questions in column A (one per row, starting at A2; a few tasks split the questions across multiple sheets whose names begin with 'Questions' - treat each the same way); the reserved answer cells are in the column headed 'Answers' in row 1 - column B in most tasks, column C in a few (where column B holds a pre-filled label such as Model or Part) - with the first answer in that column's row 2, the next in row 3, and so on. Units sit in the column headed 'Unit' where given, and answer-format instructions in the header row - plan how the model will produce each answer.
+3. All given inputs and assumptions, with their values and units.
+4. Your build plan - the tabs you will create, in order, and the calculation flow / key drivers.
+
+STEP 2 - BUILD THE MODEL:
+Build the complete Excel model in solution.xlsx, using live Excel formulas for every calculated value. Conform to HOUSE_STANDARDS.md throughout; where the case's own instructions conflict with it, the case instructions govern.
+The deliverable must also preserve and answer the starting workbook's 'Questions' sheet - see the ANSWERS convention in your system instructions.
+If the starting .xlsx file already contains sheets that need modification to complete the task, modify those original sheets directly - every sheet in the final workbook is part of the deliverable, including sheets that came with the starting file.
+
+STEP 3 - VERIFY AND DELIVER:
+Before finishing:
+1. Re-read solution.xlsx with the tools (list_worksheets, get_used_range, get_formula) and confirm it opens without errors and that every calculated value is stored as a live Excel formula, not a typed constant.
+2. Confirm every 'Questions' sheet is intact - same name, same questions in the same rows (each such sheet, where a task has more than one) - and that every reserved answer cell in the column headed 'Answers' (row 2 down, one per question; column B in most tasks, column C in a few) contains a live formula referencing the model whose result follows the header row's answer-format instructions and the 'Unit' column where given. No reserved answer cell is empty or hard-coded.
+3. Confirm the workbook conforms to HOUSE_STANDARDS.md.
+
+Fix everything you find. The deliverable is the solution.xlsx workbook itself - it must contain the completed model, not a text description of it.

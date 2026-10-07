@@ -1,0 +1,771 @@
+# Judge-only grading guidance for rubric_9 (maintainer, 2026-09-01).
+#
+# These notes change how the JUDGE applies the rubric, not what agents are
+# asked to do. They are layered onto the rendered checks at prompt time by
+# utils/rubric_guidance.py.
+#
+# This file is validated against rubric_9.json at load: a note naming a
+# category or check the rubric doesn't contain refuses to grade. If the
+# rubric is regenerated/revised, update the names here to match.
+#
+# rubric_9.json itself is generated from the agent-facing build prompt —
+# never fold these notes into it (they'd be wiped by regeneration and would
+# leak into what agents are told).
+
+general: |
+  The starting workbook (source "starting") is the file the agent was given
+  before it did any work. Never deduct points for anything that was already
+  present in the starting workbook — pre-existing sheets, values, hardcodes,
+  formatting, or structure are not the agent's work and must not count
+  against it. When you are about to record a mistake, and it is plausible
+  the offending content was inherited, check the starting workbook first;
+  only penalize what the agent added or changed.
+
+  Similarity to the solution workbook is never evidence that a check passes.
+  The solution is a reference for what the case requires, not a template the
+  attempt is graded against. Grade the attempt on its own contents: a check
+  passes because the attempt satisfies it, not because the attempt resembles
+  the solution in the areas you compared.
+
+categories:
+  Accuracy: |
+    Judge this category with a reasonable-person standard: if a reasonable
+    person comparing the attempt's answer with the golden solution's would
+    conclude they are the same, treat them as the same. NEVER penalize any
+    Accuracy check for formatting-related issues — how a value is displayed
+    (number format, font, alignment, sign styling) is the Formatting
+    category's domain, not Accuracy's.
+
+checks:
+  - category: Accuracy
+    name: Final calculation accuracy
+    note: |
+      Formatting must have no impact on this check. A negative shown as
+      (1) and one shown as -1 are the same value. An answer quoted as a
+      percentage counts as correct whether or not it is multiplied by 100
+      (0.42 and 42 for 42% are both correct). Compare underlying values,
+      not their rendering. Two answers are THE SAME whenever the
+      answer-equivalence rulebook (rendered under the Accuracy category
+      standard) says so — in particular, a difference inside the requested
+      rounding precision (a penny, when two decimal places were asked for)
+      is NOT a mistake, and a sign flip on an expense/cost/outflow row is a
+      convention, not an error. Outside those rules a different value is a
+      mistake, and an answer typed as a constant instead of a live formula
+      is a mistake even when the number is right.
+
+  - category: Accuracy
+    name: Deliverable completeness
+    note: |
+      Do not deduct points because the attempt's supporting detail or
+      deliverables use fewer cells, fewer rows or columns, are more
+      concise, or take a different format than the golden solution. If the
+      answer to a question is correct and the attempt shows supporting
+      detail for how it was derived, that is sufficient. Do not deduct for
+      formatting differences here either — a zero shown as 0, 0.0, or --
+      is equally sufficient.
+
+  - category: Assumptions
+    name: Unique assumptions
+    note: |
+      Do not subtract points for anything found on assumption pages when
+      the assumptions were provided as part of the starting workbook. Only
+      assumptions the agent itself introduced are in scope.
+
+  - category: Flexibility
+    name: Driver-based, formula-linked architecture
+    note: |
+      Do not deduct points for hardcoded cells that were already hardcoded
+      in the starting workbook the agent received. Only hardcodes the agent
+      itself introduced count against this check.
+
+  - category: Formatting
+    name: Reasonable number formats
+    note: |
+      Dates must be formatted with NO timestamp: 2027-01-01 is fine;
+      2027-01-01 00:00:00 is not.
+
+  - category: Formatting
+    name: Blue font for hardcoded inputs
+    note: |
+      Blue font marks the model's drivers — the assumptions a user is
+      expected to change to test a different scenario. Judge this on the
+      cells the model presents as inputs or assumptions: an inputs or
+      assumptions sheet, or a clearly labelled assumptions block, plus any
+      other hardcoded value that a headline output is directly sensitive
+      to. Do NOT count against the model hardcoded values that are not
+      meant to be varied — labels, headers, dates in a timeline, units,
+      counters, section numbers, constants inside formulas, and historical
+      or actual figures presented as fact rather than as an assumption.
+      If it is unclear whether a cell is a driver the user is meant to
+      vary, do not treat it as a miss.
+
+  - category: Formatting
+    name: Black font for calculations
+    note: |
+      Green is acceptable only when the formula itself references another
+      sheet, with a sheet name before "!". Read the formula before excusing
+      green: a same-sheet calculation in green, or any colour other than
+      black, is a mistake. For a spilled range, the top cell's formula
+      decides the kind of every cell in the spill.
+
+  - category: Formatting
+    name: Green font for cross-sheet links
+    note: |
+      Determine the model's own convention from the majority of its
+      cross-sheet links. Where most cross-sheet links are green, a block of
+      cross-sheet links in black is an inconsistency: fail and cite the
+      range. Where black is the model's convention for cross-sheet links, or
+      the model uses no green at all, do not deduct; black is a sanctioned
+      calculation colour. Never fail a model solely for lacking green.
+      Keep this check in step with Consistent color coding: when you cite
+      black cross-sheet cells there in a model whose convention is green,
+      those same cells are cross-sheet links that are not green, so this
+      check fails on the same range. Do not pass one and fail the other on
+      the same cells.
+
+  # ---------------------------------------------------------------------
+  # Repeat-grading stability notes (maintainer, 2026-09-02). Added after grading
+  # the same ten attempts twice with one judge (Sol@none): mean total swing
+  # 5.1%, max 10.1%, and every point of it traced to judgement checks
+  # flipping — never to a harness-decided check. The flips were opposite
+  # readings of identical evidence ("denominator guards prevent errors" vs
+  # "guards return zero, which is misleading"; "first-period exceptions are
+  # not flagged" vs "there are no first-period exceptions"). Each note below
+  # converts a two-way-readable check into a decision rule with a required
+  # citation, so a fail has to name the cell or formula that earns it.
+  # ---------------------------------------------------------------------
+
+  - category: Potential Dangers
+    name: No errors under extreme-but-plausible inputs
+    note: |
+      Fail ONLY when you can name a specific plausible input change AND the
+      specific cell that would then show an Excel error, a balance-sheet
+      imbalance, or an impossible value (negative useful life, negative
+      shares outstanding). A guard that returns 0, blank, "n/a" or a
+      sentinel for an invalid input is robust handling — it is a PASS, not
+      a "misleading result". The absence of a stress-test section, a
+      sensitivity table or documented scenario testing is NOT a failure of
+      this check; it is about whether the model breaks, not whether it
+      demonstrates that it doesn't.
+      A plausible change moves a driver to another value the business could
+      actually take: scaled (halved, doubled, tripled) or shifted (a date by
+      months, a horizon by years). Zero is a stress case only where zero is
+      a real state (0% growth, 0% return, no debt). Zero, negative, blank or
+      out-of-list values for an input that must be positive to mean
+      anything — a duration, a period count, months per year, a share
+      count, a scenario selector — are invalid inputs, not stress cases:
+      they belong to data validation (Input cells data validation) and
+      never fail this check, whether or not a validation would stop them.
+      The same holds for a perpetual (terminal-value) growth rate at or
+      above the discount rate inside a perpetuity formula, CF×(1+g)/(r−g),
+      which is only defined for g < r. This concerns the perpetuity rate
+      alone: growth of revenue, costs or any other line during the explicit
+      forecast years may exceed the discount rate, and raising it is an
+      ordinary plausible stress.
+
+  - category: Assumptions
+    name: Single date driver
+    note: |
+      Pass when one labelled date cell exists and the date-dependent
+      formulas use it, directly or through cells derived from it. Year or
+      period LABELS in headers (FY2024, 2025, Q3-2026) are labels, not date
+      logic — never fail because headers are typed rather than computed.
+      A model with no date-dependent logic (no discounting, stub periods,
+      roll-forwards or mid-year conventions) passes by default. Fail ONLY
+      when you can cite two date-dependent formulas that rely on different
+      hardcoded dates, or a date-dependent formula with a hardcoded date
+      where an anchor cell exists.
+
+  - category: Flexibility
+    name: Time-period flexibility
+    note: |
+      Judge against the horizon the case actually asks for, not a longer
+      one you can imagine. A prebuilt timeline that covers the required
+      horizon, with dates driven by formulas and drivers changeable in one
+      place, is a PASS — needing to add columns to go beyond the required
+      horizon is not a failure. Fail ONLY when changing the start date, a
+      driver, or the number of periods WITHIN the required horizon forces
+      manual formula edits; cite the formula that would have to change.
+
+  - category: Formulas
+    name: No hardcoded numbers in formulas
+    note: |
+      Permitted constants (never a mistake): 0, 1, -1, 100, 12, 4, 3, 365,
+      360, 52, 24, rounding digit counts, unit conversions, index/offset/
+      counter arguments, and comparison thresholds of zero. Fail ONLY for a
+      BUSINESS assumption embedded in a formula — a rate, price, growth
+      percentage, margin, headcount, tax rate or similar that a user might
+      reasonably want to change — and cite the cell and the constant. If
+      the same number is also present as a labelled input cell elsewhere,
+      it is a duplication issue for Centralized assumptions, not this check.
+      Also permitted: constants that only reconcile a labelling or data
+      convention — the 0.01 step between inclusive bracket labels
+      ("12,348.01 – 14,000"), a one-period offset, an epsilon tolerance in
+      a check. These are technical remnants, not inputs: no user would
+      change them.
+
+  - category: Assumptions
+    name: Centralized assumptions
+    note: |
+      A clearly labelled input block held on a build, summary or output
+      sheet is acceptable when it is the ONLY place that driver is set and
+      it is labelled or signposted. Fail ONLY when you can cite a driver
+      that is set in two different places, or a business assumption buried
+      inside a formula with no labelled input cell anywhere. Do not fail
+      because the block would be tidier on a dedicated sheet.
+      Third fail condition: when the central assumptions sheet declares
+      itself the source of all inputs (for example "use the Assumptions tab
+      as the source of truth for all inputs"), a business or timing driver
+      that is instead set on another sheet, with no pointer to it from the
+      assumptions sheet, is a fail even if it is set in only one place.
+      Historical data tables and case-provided data sheets are not drivers
+      for this purpose. Cite the block and the missing signpost.
+
+  - category: Assumptions
+    name: Assumption sources
+    note: |
+      A citation passes when it names where the number came from — a case
+      section, the starting workbook, a document, a named data provider —
+      or explicitly labels the input as a judgement/estimate with an owner
+      and a date. Never fail for citation STYLE: brevity, a missing page
+      number, a missing URL, or a source that cannot be opened from here
+      are not failures, and neither is a citation that points at the sheet
+      the value was given on. Fail ONLY for an assumption carrying no
+      source and no judgement label at all; cite it.
+
+  - category: Formulas
+    name: Inconsistent formulas flagged
+    note: |
+      First establish whether an intentional formula break EXISTS — a cell
+      whose formula differs from the rest of its row or column (typically
+      a first-period roll-forward). If none exists, the check PASSES; never
+      fail it for a break you did not find. Where one exists, it passes if
+      marked in any way: distinctive fill or font, a cell comment, an
+      exception-marker column, an error-check flag, a note in adjacent
+      documentation, OR a formula that handles the first period with an
+      explicit period test so the row stays uniform. Fail ONLY for a silent
+      break — an unmarked, undocumented different formula in one cell of an
+      otherwise uniform range; cite that cell.
+
+  - category: Formulas
+    name: Simple, stepwise formulas
+    note: |
+      Count function NESTING DEPTH, not formula length or character count.
+      A long chain of simple terms (a+b+c+d), a single IFERROR/IFNA
+      wrapper, a LET, or a construction three functions deep all PASS.
+      Fail ONLY for a formula nesting four or more functions deep that a
+      helper row or column would clearly simplify; cite the cell and its
+      formula. Formulas wrapped in LET, and LAMBDA-style array formulas
+      (LAMBDA and its helpers REDUCE, SCAN, MAP, BYROW, BYCOL, MAKEARRAY),
+      are exempt from the nesting-depth count.
+      Depth is the longest chain of a function nested inside a function;
+      sibling arguments do not add depth. MAX(0, IF(AND(a, b), SUMIFS(...),
+      0)) is three deep (MAX → IF → AND, or MAX → IF → SUMIFS), not five.
+      Count the deepest chain before deciding a formula exceeds the
+      guideline.
+
+  - category: Structure
+    name: Data-type designation (actuals vs. estimates)
+    note: |
+      This applies where a single table mixes actual and forecast columns.
+      A block holding only projections passes when its header, title, an
+      adjacent note, or a period-0 opening column makes that clear. Fail
+      when (a) actual and projected columns sit in one table with no
+      designation of any kind, or (b) a designation row exists but mislabels
+      a column: an opening, historical, or actual column tagged as a
+      forecast or model period, or the reverse. Check the label against the
+      year and period rows. Cite the header row.
+
+  - category: Formatting
+    name: Consistent color coding
+    note: |
+      Judge FONT colour on the sheets the agent built, against the
+      workbook's own stated convention. Fills, header shading, banded rows
+      and title styling are decoration, not colour coding — never count
+      them here. Colour inherited from the starting workbook is out of
+      scope. Fail ONLY when you can cite cells of the same kind carrying
+      different font colours, or a reserved colour used for the wrong kind
+      of cell. Same-sheet calculations in black sitting beside green formulas
+      that reference another sheet is the convention working as intended —
+      those are cells of DIFFERENT kinds, not an inconsistency. Before citing
+      two formula cells as inconsistent, confirm they are the same kind (both
+      same-sheet, or both cross-sheet).
+
+  - category: Formatting
+    name: Minimal non-standard color usage
+    note: |
+      This check is about visual CLUTTER — a rainbow of unexplained
+      colours. A consistent header fill, a single input-block fill, banded
+      rows, and a documented accent colour used systematically are all
+      fine, however many cells they cover; breadth of a consistent scheme
+      is not clutter. Fail ONLY when you can name three or more distinct
+      non-standard colours with no stated purpose.
+
+  - category: Formatting
+    name: No colors that mimic standard coding
+    note: |
+      Unit labels, such as bracketed units like [$], [%], [#], [days], and
+      the "Units" column heading above them, may carry the input blue; they
+      sit beside inputs and cannot be mistaken for inputs. Any other text in
+      a reserved colour, such as row labels, section headings, or totals, is
+      a violation. Pale tints used for header rows, input blocks, or section
+      bands, dark bands with contrasting text, and negative numbers shown in
+      red never mimic font coding. A saturated fill in one of the reserved
+      colours (pure green, blue, or red, such as 00B050, 0000FF/0070C0,
+      FF0000) applied to individual calculation or output cells does mimic
+      it and is a violation. Negative numbers in red are a standard
+      accounting convention and never a violation.
+
+  - category: Error Checks
+    name: No unresolved cell warnings
+    note: |
+      A cell served with [TEXT] is a constant stored as text that reads
+      like a number (the case Excel flags as "number stored as text").
+      Treat it as a defect only where the value is used as a quantity — an
+      input, a driver, or a figure that feeds or should feed a calculation.
+      Version labels, step and section numbers, codes with leading zeros
+      and similar identifiers are text on purpose and are not mistakes.
+      Formula results are never marked; a formula that returns text on
+      purpose (TEXT, concatenation) is judged from its formula, not here.
+
+  # --- 2026-09-14: notes added from the toy-task reliability run 1 misses ---
+
+  - category: Documentation
+    name: Linked table of contents
+    note: |
+      A table of contents satisfies this check when every OTHER worksheet is
+      reachable from it by hyperlink. The entry for the contents sheet itself
+      needs no link, and neither do section headings within the contents
+      list. Fail only for a worksheet with no hyperlink to it, or hyperlinks
+      that point nowhere.
+
+  - category: Documentation
+    name: Purpose documentation
+    note: |
+      The case brief / Instructions sheet the agent was given is the QUESTION,
+      not the model's documentation. Purpose documentation must be authored
+      for the model — a cover, documentation or "about" sheet, or a clearly
+      labelled block, stating what the model is for and which business
+      question it answers. Retaining the brief does not satisfy this check
+      on its own. A cover or documentation block the agent wrote counts even
+      when it paraphrases the brief, when the starting workbook shows the
+      agent added it; without that evidence, text that reads as the case
+      brief is the brief.
+
+  - category: Formatting
+    name: Numbers right-aligned
+    note: |
+      Excel's default (General) horizontal alignment renders numbers
+      right-aligned. A numeric cell with no explicit alignment IS
+      right-aligned — never cite "no explicit right-alignment setting" as a
+      mistake. Fail only for numeric cells explicitly set to left or center
+      alignment, and cite them. An alignment token belongs to the cell whose
+      [ref] opens the same field; a field with a FORMAT segment and no
+      [ref] is an empty cell and is never an alignment mistake. The case's
+      questions-and-answers sheet has its layout and cell formatting set by
+      the case; its alignment is not judged here. Identify that sheet by
+      its role, not its name.
+
+  - category: Formatting
+    name: Currency stated
+    note: |
+      A currency symbol used as the unit label — "$", "[$]", "€", "£", "$mm",
+      "USD 000s" — states the currency. Do not fail because the symbol is not
+      spelled out as an ISO code, unless the case involves more than one
+      currency (FX) and the symbol leaves the reader unable to tell which.
+      Fail when monetary blocks or columns carry no currency indication at all.
+
+  - category: Formatting
+    name: File extension (.xlsx)
+    note: |
+      The attempt is always staged for grading as ai_attempt.xlsx; judge this
+      check from the "original filename" shown in the workbook properties
+      header, never from the staged name. .xlsx passes; .xlsm passes when VBA
+      is present and is a mistake when the properties report no VBA (a
+      macro-less workbook should be .xlsx); .xls, .xlsb, .csv and exports from
+      other applications fail.
+
+  # --- 2026-09-14 judge-misses walkthrough (toy 70) --------------------------
+
+  - category: Formatting
+    name: Reasonable column widths
+    note: |
+      Two tests, both required. First: any column tagged WIDE OUTLIER in
+      the properties summary fails unless that column's own content needs
+      the width; cite the range. Second: any column wider than roughly 75-80
+      characters at the default font fails regardless of its neighbours.
+      Passing the second test says nothing about the first; do not stop at
+      the widest column. A helper column sized to show its own header label
+      is not excessive. The case's own brief (the Instructions sheet the
+      agent was given) is excluded from this check, including its text
+      wrapping and column widths.
+
+  # --- 2026-09-14 judge-misses walkthrough ------------------------------------
+
+  - category: Formatting
+    name: Negatives in parentheses
+    note: |
+      The case's questions-and-answers sheet has its layout and cell
+      formatting set by the case; its formatting is not judged here.
+      Identify that sheet by its role, not its name.
+
+  - category: Formatting
+    name: Zeros as dashes
+    note: |
+      The case's questions-and-answers sheet has its layout and cell
+      formatting set by the case; its formatting is not judged here.
+      Identify that sheet by its role, not its name.
+      This applies to financial and quantity values. Period counters, flags,
+      switches, check counts, index cells, and true/false results may
+      display 0; do not fail for them.
+      A cell served as "0.00 [actual 3.6e-12]" (or "(0.00) [actual …]",
+      "-0.0 [actual …]") is NOT a zero: the tag carries its real, non-zero
+      value, and a dash format would have shown the dash for a true zero.
+      Never fail this check for a tagged cell. Fail only cells whose value
+      is exactly zero (no tag) and that display 0, 0.0 or 0.00 where a dash
+      belongs, subject to the exemptions above.
+
+  - category: Formatting
+    name: Thousands separators
+    note: |
+      The case's questions-and-answers sheet has its layout and cell
+      formatting set by the case; its formatting is not judged here.
+      Identify that sheet by its role, not its name.
+
+  - category: Documentation
+    name: Formula commentary for non-obvious formulas
+    note: |
+      List the model's non-obvious formulas: deep nesting, LAMBDA or array
+      constructions, custom functions, and domain methods such as a distance
+      or search algorithm. Each should carry its own note, or a note pointing
+      to where the same construction is explained. A non-obvious formula with
+      neither is a mistake; cite the cell. One note per block is enough: a
+      formula copied across a row or column, or filling one contiguous block,
+      needs a single note, not one per cell. The same construction repeated
+      in a separate block, for example on another sheet, needs its own note
+      or a pointer.
+
+  - category: Accuracy
+    name: Starting values
+    note: |
+      Where the case supplies input values in the workbook, such as an
+      Assumptions or Inputs sheet, the model must use them by reference:
+      formulas link back to those cells. A starting value re-typed or pasted
+      elsewhere is a mistake, even when it matches, where that copy feeds a
+      calculation or an answer, because the model would no longer follow the
+      case's inputs if they changed; cite the cell. A copy that only labels
+      or displays the value and feeds nothing is not judged here. Inputs the
+      case gives only in text are entered once, on an inputs sheet, and
+      referenced from there.
+      Also scan summary and output sheets, not only the inputs sheet and the
+      model body, for typed dates and constants that equal a case input;
+      where the properties summary lists a typed date literal inside a
+      formula, check that cell.
+
+  - category: Flexibility
+    name: M&A / divestiture flexibility
+    note: |
+      This check applies only when the case concerns a company or group whose
+      set of business units could plausibly change: several segments,
+      business lines or locations, or a case that mentions acquisitions,
+      divestitures or new units. When the case has a single business unit and
+      no mention of others, or concerns a security, a fund or portfolio, a
+      single forecast series, or a personal decision, the check is satisfied
+      by default.
+
+  - category: Rounding
+    name: Rounded outputs
+    note: |
+      Judge the precision a reader sees on the final outputs: the answer
+      cells and the summary or output figures presented to the reader.
+      Rounding by ROUND() or by number format both count. Where the task
+      states a precision for the answers, that governs the answers.
+      Otherwise, precision in line with the House Standards, or comparably
+      sensible, passes. Fail only for clear false precision, such as figures
+      in the thousands or more shown to the cent, or ratios and percentages
+      shown to four or more decimals. Intermediate calculation cells are out
+      of scope here; "Full precision in intermediates" covers them. A blank
+      answer is not a rounding mistake; Accuracy covers missing answers.
+
+  - category: Error Checks
+    name: Reasonable file size
+    note: |
+      Judge proportionality, not only the megabyte guideline. Compare the
+      attempt's file size with the solution's: a workbook several times the
+      size of the solution with comparable content is bloated even when it
+      is under 10 MB. A sheet whose declared size extends to Excel's full
+      sheet width or height is marked OVERSIZED RANGE in the properties
+      block; that is the oversized used range the rubric names as bloat and
+      is strong evidence of a fail, unless the starting workbook or the
+      solution carries the same sheet at the same extent, in which case it
+      was inherited and is not the agent's mistake.
+
+  - category: Structure
+    name: Cover sheet first
+    note: |
+      The first tab must work as a cover: it identifies the model and orients
+      the reader on opening. Judge its contents, not its name; a first tab
+      called "Summary", "Overview" or anything else passes if it does that
+      job. Cover information includes the model's title, purpose, owner,
+      version and date, and also what the House Standards ask a cover to
+      carry: scope (including what the model leaves out), a legend of
+      colours and abbreviations, the approach and main design decisions,
+      what may be changed, how a case is selected, and where the answer is
+      read. These are typical contents, not a checklist: a first tab that
+      states the title and purpose plus several of the other items passes,
+      and some missing is not a failure. Fail when the first tab carries
+      little of this information, or when a cover-like page exists but is
+      not the first tab.
+
+  # --- 2026-09-16 judge v9: toy-reliability runs 2-3 walkthrough --------------
+  # Decisions log: the maintainers' JUDGE_DECISIONS_2026-09-16.md (not in the repository). Every
+  # note below was checked against the 101 golden solutions before adoption.
+
+  - category: Structure
+    name: Functional sheet separation
+    note: |
+      Judge "separate sheets" by whether each function is clearly
+      distinguishable, not by sheet count. A single calculation sheet that
+      holds inputs, schedules, statements, and outputs in clearly labeled,
+      contiguous, non-overlapping sections satisfies this check, as do the
+      benchmark's own solution workbooks. Fail only when functions are
+      genuinely interleaved: inputs typed inside a schedule, an output table
+      built in the middle of the assumptions block, or sections a reader
+      cannot tell apart without tracing formulas. A cover or instructions
+      sheet that also holds inputs is not a mistake if the inputs are in a
+      labeled block. Content placed after a sheet's End marker (the
+      properties summary reports "content continues N rows past the End
+      marker") sits outside the sheet's declared structure and is NOT a
+      separated section, however it is labeled: fail and cite the block.
+
+  - category: Structure
+    name: Roll-forward (corkscrew) structure for balances
+    note: |
+      Grade this on whether balance movements are visible and periods
+      chain, not on row count. A balance computed in a single formula
+      satisfies this check when the formula reads as opening balance plus
+      additions minus deductions, each component is drawn from a labeled
+      row or input, and each period's result feeds the next period. The
+      benchmark's own solution workbooks use this compact form for debt,
+      PP&E, and equity. Fail when a balance is hardcoded, when the
+      movements cannot be traced to labeled rows, when a period's opening
+      balance does not equal the prior closing balance, or when the formula
+      compresses several unrelated steps so the movement cannot be read.
+
+  - category: Structure
+    name: Timeline orientation
+    note: |
+      Inspect the full used range of every calculation tab, including any
+      tables below or beside the main block and anything past an "End"
+      marker. A summary or recap table that lists periods down rows on a
+      tab whose main timeline runs across columns is mixed orientation and
+      fails, unless it is a record-style register (one row per item with
+      several attribute columns). A period-by-period series of the same
+      metrics is not a register. Where the properties summary reports a
+      PERIOD SERIES on the tab, check it.
+      A long high-frequency schedule — a monthly or daily engine running
+      to hundreds of periods (loan amortization, a month-by-month ledger) —
+      is conventionally built down rows; across columns it needs hundreds
+      of columns. There a vertical timeline is justified by content when it
+      is applied consistently across the calculation tabs: do not fail it
+      as "vertical by default". Either orientation passes for such
+      schedules. The horizontal standard binds where the periods fit across
+      columns (annual and quarterly models).
+
+  - category: Structure
+    name: Deal vs. planning orientation
+    note: |
+      Read the case to decide which purpose the model serves: ongoing
+      planning (a recurring forecast refreshed period by period, such as an
+      FP&A or budget model) or one-time deal evaluation (entry and exit,
+      sources and uses, returns to investors). Then judge whether the
+      workbook's structure serves that purpose and only that purpose.
+      Structure that belongs to the other purpose counts against this check
+      even when it sits outside the calculation engine: a Sources & Uses
+      table, entry or exit valuation, or returns analysis bolted onto a
+      planning model; or a rolling multi-period refresh cadence built into
+      a one-time deal model. Cite the block. A model whose structure
+      matches its stated purpose with nothing from the other purpose added
+      passes.
+
+  - category: Assumptions
+    name: Assumption units
+    note: |
+      A cell formatted and displayed as a date, or holding Yes/No, On/Off,
+      or a switch value, states its own unit; a blank unit label beside it
+      is not a mistake. Fail only for a number whose unit or scale cannot
+      be read from the cell or its label.
+
+  - category: Error Checks
+    name: Consistent units
+    note: |
+      A value labelled in one scale that feeds a line labelled in another
+      scale with no conversion between them is mixing scales, even though
+      both are labelled: for example an input shown as 77.5 [$k] multiplied
+      straight into a [$] wage line. Follow the value into the calculation,
+      not only the label beside it, and cite both cells. Values that are
+      converted explicitly (×1,000, ÷1,000,000) are consistent.
+
+  # --- 2026-09-17 judge v10: toy re-test misses 69 / 115 / 117 --------------
+  # Checked against the 101 golden solutions: no golden has a numeric ###
+  # cell or content past its End marker; 64 goldens have header labels
+  # wider than their column, so text overflow is not evidence for check 69.
+
+  - category: Formatting
+    name: Sufficient column widths
+    note: |
+      Judge this on values that cannot be read: numeric cells the
+      properties summary lists as "NUMERIC exceeds width (would render
+      ###)", and any value hidden by its column. A text label that runs a
+      few characters past its column is ordinary formatting practice and
+      is NOT a mistake on this check; do not infer truncation from column
+      widths or label lengths. When the summary reports that no numeric
+      value exceeds its column width and no hidden value is found, the
+      check passes.
+
+  - category: Structure
+    name: Functional calculation sections
+    note: |
+      Sectioning is judged on the calculation sheet as laid out. When the
+      properties summary reports content continuing past the sheet's End
+      marker, the rows below the marker belong to no section: an End marker
+      placed above the calculations means the sheet is not sectioned at
+      all, and calculation blocks appended after the marker are unsectioned.
+      Fail and cite the marker cell and the rows below it.
+
+  - category: Error Checks
+    name: No formula errors
+    note: |
+      When a sheet's properties line reads IMPLICIT INTERSECTION, every
+      formula it lists displays #VALUE! in Excel even though the served CSV
+      shows a number for it: the formula uses a multi-cell range as a single
+      value from a cell outside that range, carries no array marker, and the
+      served value came from a non-Excel recalculation. Treat each listed
+      cell as a visible Excel error: fail this check and cite the cells
+      (formulas that reference them display #VALUE! as well). A formula that
+      is NOT listed is never an implicit-intersection error, whatever its
+      shape; do not infer one from formula text.
+
+  - category: Formatting
+    name: Input cells data validation
+    note: |
+      The properties summary lists every validation with its rule and its
+      error-alert state. A validation whose alert is OFF neither rejects nor
+      flags an entry: Excel accepts anything typed into the cell (a list
+      merely shows a dropdown). Treat alert-OFF validations as absent; a
+      sheet whose validations are all alert-OFF has no working validation.
+      "Key input cells" are the hardcoded drivers a user is meant to change
+      (scenario selectors, switches, dates, durations, rates, counts, unit
+      factors), not pasted data blocks (financial statements,
+      comparable-company tables, time series), which need none. Pass when
+      the key drivers carry alert-ON validation (stop or warning); fail and
+      cite the cells when they do not, or when the only validation present
+      has its alert off.
+
+  - category: Rounding
+    name: Rounding documented
+    note: |
+      The properties summary lists each sheet's rounding statements beside
+      the number of formulas on that sheet that use a rounding function. A
+      statement that figures are "rounded to" a precision is accurate only
+      where those figures are rounded by formula. Where the formulas carry
+      full precision and only the number format limits what is displayed
+      (rounding-function count 0, or rounding confined to other figures),
+      the accurate wording is "shown to" or "displayed to" that precision,
+      or a statement that full precision is carried; a "rounded to" label
+      there misdescribes the model: fail and cite the label cell. Wording
+      that says shown/displayed, or that says figures are carried
+      unrounded, passes. Rounding wording on the case's instructions or
+      questions-and-answers sheet is the case's text, not the agent's
+      documentation. This note does not touch Rounded outputs: display
+      precision remains an acceptable way to round final outputs there.
+
+  - category: Structure
+    name: Freeze panes set
+    note: |
+      The properties summary gives each sheet's freeze position with the
+      rows and columns it locks and their approximate size. A sheet tagged
+      EXCESSIVE locks more than about two thirds of a regular screen in
+      rows (over roughly 300 points, about 20 standard rows) or a full
+      screen in columns (over roughly 200 characters): what lies below or
+      beside the locked area
+      cannot be scrolled into a useful view. Fail and cite the sheet and
+      its freeze cell, even when panes are otherwise set where needed.
+      Without the tag, do not fail for excess.
+
+  - category: Model Outputs & Executive Summary
+    name: Output reasonableness check
+    note: |
+      A sense check compares a key output with something OUTSIDE the model:
+      an industry range, a comparable company or transaction, a third-party
+      estimate, or a benchmark bound or range the modeller typed for the
+      purpose. The rubric allows a check against intuition, so a bound
+      sourced as the modeller's judgment counts. Such a bound drives no
+      calculation: it is an outside benchmark wherever it sits, the inputs
+      sheet included. An input or assumption that DRIVES the model is never
+      a valid benchmark.
+      Comparing a modeled figure with the model's own input or assumption
+      (or a link to it), or with another figure derived from the same
+      inputs, is a reconciliation, not a sense check, whatever the section
+      is called: set such rows aside. So are tests any figure would meet
+      (positive, between 0% and 100%). Judge what remains. Pass only when
+      the model's key outputs, the headline figures for this model type,
+      are covered by outside comparisons. An isolated outside comparison
+      beside key outputs that go unchecked does not pass. Fail and cite the
+      sense-check section when it rests on the model's own driving inputs or
+      leaves key outputs without an outside comparison.
+
+  - category: Formatting
+    name: Text left-aligned
+    note: |
+      Excel's default (General) horizontal alignment renders text
+      left-aligned and numbers right-aligned. A text cell whose FORMAT
+      segment carries no halign token IS left-aligned — never cite it as a
+      mistake. Fail only for text cells explicitly set to right or center
+      alignment that are not column headers over numeric columns, and cite
+      them. An alignment token belongs to the cell whose [ref] opens the
+      same field; a field with a FORMAT segment and no [ref] is an empty
+      cell and is never a text-alignment mistake. The case's
+      questions-and-answers sheet has its layout and cell formatting set by
+      the case; its alignment is not judged here. Identify that sheet by
+      its role, not its name.
+
+  - category: Error Checks
+    name: Master error flag
+    note: |
+      When a check row displays an Excel error — a cell the properties
+      summary lists under IMPLICIT INTERSECTION, a formula it lists as
+      referencing one, or a cached error value — test the roll-up behind
+      the flag. COUNTIF / COUNTIFS on FALSE, "FAIL" or "ERROR" skip error
+      values, so such a flag still reads OK while that check is broken. A
+      master flag that stays OK while a check row is in error fails this
+      check; cite the roll-up cell. Without an erroring check row, do not
+      fail a flag for how its roll-up is built.
+
+  - category: Formatting
+    name: Page breaks set
+    note: |
+      Decide per sheet, from the "print estimate" line of the properties
+      summary. A sheet it tags MULTI-PAGE, NO MANUAL BREAKS prints on more
+      than one page with Excel cutting wherever the page runs out: it needs
+      manual breaks at its section boundaries, and breaks on other sheets
+      do not cover for it. Fail and cite each tagged sheet the agent built
+      or changed; a sheet that came with the starting workbook carries the
+      same line in that workbook's summary and is not the agent's print
+      setup. A sheet that fits one page needs no breaks. No tag, no fail
+      for missing breaks; where breaks exist, fail them only when they cut
+      through a table or section.
+
+  - category: Structure
+    name: Best-fit structure for stated purpose
+    note: |
+      A clearly better alternative exists when the workbook reaches a result
+      by brute-force replication — the same calculation block copied many
+      times to unroll an iteration or to fill a sensitivity grid, thousands
+      of formulas — where a standard Excel mechanism delivers the same
+      outputs: a what-if data table, iterative calculation with a breaker
+      switch, or one parameterised block. Fail and name the mechanism and
+      the replicated range. A stated reason for the replication (avoiding
+      circularity, a tool that cannot evaluate data tables) explains the
+      choice but does not make the structure the best fit. Do not fail for
+      a different but comparably compact layout.

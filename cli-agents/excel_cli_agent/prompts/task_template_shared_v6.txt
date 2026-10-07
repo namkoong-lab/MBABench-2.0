@@ -1,0 +1,47 @@
+OUTPUT FILENAME REQUIREMENT (MANDATORY):
+You MUST create a file named exactly "solution.xlsx" in the workspace.
+This is NOT optional and NOT configurable. Validation will REJECT any other filename.
+Example: create_file(filename="solution.xlsx", worksheets=["Cover", "Contents", "Assumptions", "Calculations", "Summary", "Error Checks", ...])
+
+CRITICAL CIRCULAR REFERENCE PREVENTION:
+- NEVER use = prefix for constants (use 19999 not =19999)
+- NEVER use = prefix for text (use "Revenue" not ="Revenue")
+- ONLY use = prefix for calculations with set_cell_formula tool
+- ALWAYS check cell contents before referencing in formulas
+- NEVER reference cells containing text in mathematical formulas
+- NEVER create formulas where the cell is within its own range (e.g., B2: =SUM(B1:B5))
+
+FORMULA TOOL USAGE (CRITICAL):
+- ALWAYS use set_cell_formula for ANY formula (no exceptions)
+- NEVER use edit_cells for formulas - they will be stored as text and fail validation
+- edit_cells is ONLY for text labels and numeric constants, NOT formulas
+- For multiple formulas: use actions array with multiple set_cell_formula calls
+Example WRONG: edit_cells([{"cell": "B2", "value": "=SUM(A1:A10)"}])
+Example RIGHT: set_cell_formula({"cell": "B2", "formula": "SUM(A1:A10)"})
+
+You are an expert financial-modeling agent building an Excel solution for the attached case. Work in THREE steps, completing all of them in this session.
+
+Your only allowed method for solving this is the Excel workbook itself: build every calculation as a live Excel formula in solution.xlsx. Never compute a result outside Excel and enter it as a constant - the workbook must perform all calculations.
+
+STEP 1 - ANALYZE & PLAN (do not build yet):
+Read ALL files in the ATTACHED PDFs and ATTACHED EXCEL CONTEXT sections above, then produce a brief written analysis on a new sheet named 'Summary', covering:
+1. Task type - which financial model is required (e.g., 3-Statement, DCF, LBO, Valuation, Project Finance, Working Capital).
+2. The primary question(s) to answer and every deliverable the case requires.
+3. All given inputs and assumptions, with their values and units.
+4. Your build plan - the tabs you will create, in order, and the calculation flow / key drivers.
+
+STEP 2 - BUILD THE MODEL:
+Build the complete Excel model in solution.xlsx, using live Excel formulas for every calculated value. You will be graded against the EVALUATION RUBRIC in your system instructions (12 weighted categories, 132 checks) - build so that every check meets its "Good" standard and avoids its "Bad" standard.
+If the starting .xlsx file already contains sheets that need modification to satisfy the rubric, modify those original sheets directly - every sheet in the final workbook will be graded, including sheets that came with the starting file.
+
+STEP 3 - QA AND DELIVER:
+Audit the workbook against the rubric's Error Checks and Potential Dangers categories and fix every issue:
+1. Zero visible Excel errors (#REF!, #N/A, #DIV/0!, #VALUE!, #NAME?, #NUM!, #NULL!) and no green-triangle cell warnings.
+2. A dedicated Error Checks sheet with check rows: subtotals tie to totals; if it is a 3-statement model, the balance sheet balances in every period, the three statements fully articulate, and the debt / equity / retained-earnings roll-forwards tie. Add a master "Model OK" flag on the Cover that turns red if any check fails.
+3. IFERROR/IFNA only wraps errors you intentionally expect - never use it to hide a genuine error. Remove any blanket IFERROR(..., 0) wrapping.
+4. The same item ties to the same value everywhere it appears across sheets.
+5. No hidden sheets/rows/columns, no white-on-white text, no external links, no macros/VBA.
+6. The Summary/output sheet auto-updates from the model (no hardcoded results).
+7. Sign convention, units, and number formats are consistent throughout.
+
+Fix everything you find and confirm the master "Model OK" flag is green. The deliverable is the solution.xlsx workbook itself - it must contain the completed model, not a text description of it.

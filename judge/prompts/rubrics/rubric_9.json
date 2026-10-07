@@ -1,0 +1,818 @@
+{
+  "Accuracy": [
+    {
+      "name": "Final calculation accuracy",
+      "description": "The final calculations must be accurate given the inputs and case context.",
+      "good": "Calculations are accurate and consistent with the inputs and case context. Hardcoded outputs are not accepted as correct - even where the value happens to be right - because there is no way to verify that the result was calculated in the workbook. A single incorrect output is enough to fail this item. Differences that follow from a documented rounding convention do not count as errors.",
+      "bad": "Calculations contain errors, are incomplete relative to the case requirements, key outputs are absent, or the answers are hardcoded."
+    },
+    {
+      "name": "Starting values",
+      "description": "The workbook must use the correct starting/input values given in the case context, transcribed with the correct unit and scale.",
+      "good": "Workbook uses the correct starting/input values from the case context.",
+      "bad": "One or more starting/input values differ from the case context, or are transcribed with the wrong unit or scale."
+    },
+    {
+      "name": "Deliverable completeness",
+      "description": "Every output, schedule, and deliverable specified in the case context is present and fully built out.",
+      "good": "All deliverables specified in the case context are present and complete.",
+      "bad": "Workbook does not complete the task; outputs are missing or partial."
+    }
+  ],
+  "Assumptions": [
+    {
+      "name": "Centralized assumptions",
+      "description": "All assumptions should be summarized at the beginning of the model or in a separate assumptions sheet, rather than hidden in calculation cells or scattered throughout the model. Assumptions should flow in one direction: from the assumptions sheet into calculations, never the reverse. A clearly labeled, self-contained input block held on a build sheet is acceptable where it is the single source for that driver and is signposted from the central assumptions sheet.",
+      "good": "All assumptions are grouped at the start of the model or on a dedicated sheet; easy to find and update. Any input block held on a build sheet is clearly labeled and signposted from the central assumptions sheet.",
+      "bad": "Assumptions are embedded directly in formulas (e.g., =B5*1.05) or appear on multiple sheets with no single source of truth."
+    },
+    {
+      "name": "Unique assumptions",
+      "description": "Each assumption should appear only once; no duplicates elsewhere in the model.",
+      "good": "Each assumption is defined only once; no duplicates or repetitions exist.",
+      "bad": "Assumptions are duplicated or repeated across cells or sheets."
+    },
+    {
+      "name": "Assumption labeling",
+      "description": "Each assumption must have a clear, descriptive label identifying what it represents.",
+      "good": "Every assumption has a clear, descriptive label identifying what it represents.",
+      "bad": "Assumptions lack labels, or labels are vague (e.g., 'Rate 1', 'Input') and don't explain what the value represents."
+    },
+    {
+      "name": "Assumption units",
+      "description": "Each assumption must display an explicit unit of measure (e.g., %, $, x, days) so the reader can interpret values without guessing.",
+      "good": "Every assumption displays an explicit, correct unit of measure (%, $mm, x, days).",
+      "bad": "Assumptions lack units, or units are implicit (e.g., a percentage entered as 5 with no % indicator)."
+    },
+    {
+      "name": "Assumption sources",
+      "description": "Each assumption must reference its source (e.g., a specific section of the case context, a company filing, or a market data provider) so reviewers can verify inputs and assess staleness. Where no external source exists, the assumption must be explicitly labeled as a judgment or estimate, with an owner and a date.",
+      "good": "Every assumption cites a specific, verifiable source (e.g., 'case context, section 2' or '10-K FY2024 p.45'), dated where a date is meaningful - or, where no external source exists, is explicitly labeled as a judgment or estimate with an owner and date.",
+      "bad": "Assumptions lack source citations, or sources are vague (e.g., 'management' with no owner, date, or document reference)."
+    },
+    {
+      "name": "Named ranges for key assumptions",
+      "description": "Key global inputs (e.g., tax_rate, valuation_date) should use named ranges to improve formula readability. Apply sparingly; overuse hides cell references and clutters the Name Manager. Names should follow a consistent convention and be self-explanatory.",
+      "good": "Truly global, stable inputs (e.g., tax rate, valuation date) use named ranges.",
+      "bad": "Named ranges are missing for key globals, or names are unclear or inconsistently constructed."
+    },
+    {
+      "name": "Single date driver",
+      "description": "A single, clearly labeled anchor date (valuation date, as-of date, or model start date) should drive discount periods, stub periods, mid-year conventions, and roll-forwards across the model. A model with no date-dependent logic satisfies this item by default.",
+      "good": "One labeled anchor date cell drives all date-dependent logic, including discount periods, stub periods, roll-forwards, and mid-year conventions - or the model contains no date-dependent logic.",
+      "bad": "No single date driver; dates are hardcoded or scattered across cells."
+    }
+  ],
+  "Documentation": [
+    {
+      "name": "Formula commentary for non-obvious formulas",
+      "description": "Non-obvious or complex formulas should carry an explanation - a cell comment or note, or an adjacent annotation column. The explanation should state what the formula does and why that approach was chosen, not simply restate the formula.",
+      "good": "Non-obvious and complex formulas are explained via comments, notes, or an annotation column, covering the business rationale or methodology rather than restating the formula.",
+      "bad": "Complex formulas carry no explanation, or the explanation says what the formula computes (e.g., 'calculates margin') instead of why that method was chosen."
+    },
+    {
+      "name": "Glossary of conventions",
+      "description": "The workbook should include a glossary documenting colors, abbreviations, and conventions used in the model.",
+      "good": "A glossary documents colors, abbreviations, and conventions.",
+      "bad": "No glossary; colors, abbreviations, and conventions are unexplained."
+    },
+    {
+      "name": "How to use guide",
+      "description": "A 'How to use this model' tab or section should walk users through inputs, scenarios, and outputs, and explain how to operate the model from the user's perspective.",
+      "good": "A 'How to use' tab or section guides the user through the inputs they may change, how to select scenarios, and where to read the outputs.",
+      "bad": "No usage guide for the model."
+    },
+    {
+      "name": "Linked table of contents",
+      "description": "The model should include a table of contents with hyperlinks to each worksheet. For very small workbooks (roughly three sheets or fewer) a table of contents may reasonably be omitted.",
+      "good": "A table of contents links to each sheet via hyperlinks - or the workbook is small enough that one is not warranted.",
+      "bad": "No table of contents, or one without working hyperlinks."
+    },
+    {
+      "name": "Clear tab names",
+      "description": "Every tab must have a clear, descriptive name (e.g., 'Rev_Build', 'IS_Annual'). Generic names like 'Sheet3' are unacceptable.",
+      "good": "Every tab has a clear, descriptive, professional name.",
+      "bad": "One or more tabs retain default names (e.g., 'Sheet1', 'Sheet3') or use cryptic abbreviations not explained in a glossary."
+    },
+    {
+      "name": "Purpose documentation",
+      "description": "The model should include documentation that clearly articulates its intended purpose and the business question it answers.",
+      "good": "Documentation clearly states the purpose.",
+      "bad": "No documentation of purpose or no documentation at all."
+    },
+    {
+      "name": "Scope documentation",
+      "description": "Documentation explicitly lists what the model covers, what it excludes, and the boundary assumptions that justify each exclusion.",
+      "good": "Documentation clearly states the scope.",
+      "bad": "No documentation of scope or no documentation at all."
+    },
+    {
+      "name": "Key design decisions documentation",
+      "description": "The model should include documentation explaining key design decisions (e.g., choice of valuation methodology, granularity of build, consolidation approach) and the reasoning behind them.",
+      "good": "Documentation clearly states key design decisions.",
+      "bad": "No documentation of design decisions or no documentation at all."
+    },
+    {
+      "name": "Version history / change log",
+      "description": "The model should include a version history or change log recording what changed, when, and by whom - on a dedicated tab or in a clearly labeled section of the cover sheet.",
+      "good": "A version history or change log records what changed, when, and by whom, on a dedicated tab or in a clearly labeled cover-sheet section.",
+      "bad": "No version history or change log."
+    },
+    {
+      "name": "Methodology documentation",
+      "description": "Methodology documentation should explain the modeling approach, conventions, and assumptions for stakeholders and users. It may sit outside the workbook, provided the model points to it.",
+      "good": "Methodology documentation explains the approach, conventions, and assumptions.",
+      "bad": "No methodology documentation accompanies the model, or it is referenced but not provided."
+    }
+  ],
+  "Error Checks": [
+    {
+      "name": "Subtotals tie to totals",
+      "description": "Subtotals must be correct SUMs of their line items and must tie to the totals they roll into. Cross-check that no line items are accidentally excluded from or double-counted in a SUM range.",
+      "good": "All subtotals correctly sum their items and tie to totals.",
+      "bad": "Subtotals omit items, are mis-derived, or fail to tie to totals."
+    },
+    {
+      "name": "No formula errors",
+      "description": "The model must be free of any visible Excel errors (#REF!, #N/A, #DIV/0!, #VALUE!, #NUM!, #NULL!, #NAME?, and in modern Excel #SPILL! and #CALC!).",
+      "good": "No visible Excel errors anywhere in the model.",
+      "bad": "One or more visible Excel errors are present."
+    },
+    {
+      "name": "No unresolved cell warnings",
+      "description": "The model should contain no unresolved cell warnings. These warnings signal potential issues (numbers stored as text, omitted cells in ranges, inconsistent formulas) that, left unresolved, undermine trust in the model. Warnings that are known false positives (e.g., a year deliberately stored as text) should be dismissed or explained rather than left visible.",
+      "good": "No unresolved cell warnings are present.",
+      "bad": "Unresolved cell warnings appear, indicating unresolved issues."
+    },
+    {
+      "name": "IFERROR/IFNA used only for expected errors",
+      "description": "Error handling (e.g., IFERROR, IFNA) should suppress only intentionally produced errors (e.g., a VLOOKUP returning #N/A in early periods before data exists). Genuine errors must remain visible for investigation.",
+      "good": "Error handling suppresses only intentional errors; genuine errors stay visible.",
+      "bad": "Error handling masks genuine errors that should be visible."
+    },
+    {
+      "name": "Reasonable file size",
+      "description": "File size should be proportionate to the model's content. As a guideline, a typical single-entity operating or valuation model should rarely exceed 10 MB; sizes above 25 MB usually indicate oversized used ranges, legacy formatting, embedded objects, or model bloat. A larger file is acceptable where the content justifies it (e.g., an embedded data extract), provided the reason is documented.",
+      "good": "File size is proportionate to content; a typical model stays under 10 MB, and any larger file has a documented justification.",
+      "bad": "File size is excessive, suggesting bloated ranges, legacy formatting, or embedded objects."
+    },
+    {
+      "name": "Reasonable recalculation time",
+      "description": "The model should recalculate in a reasonable time (a full recalculation under 5 seconds is a good benchmark for a typical single-entity model). Long recalculation times often point to volatile functions (INDIRECT, OFFSET, NOW), whole-column references, array formulas over large ranges, or overly complex formula chains.",
+      "good": "The model recalculates quickly (under 5 seconds for a typical model); no noticeable lag when changing inputs.",
+      "bad": "Recalculation is noticeably slow (5 seconds or longer), impeding interactive use and scenario analysis."
+    },
+    {
+      "name": "Cross-sheet value agreement",
+      "description": "A value for a specific item must match everywhere that item appears across sheets and outputs. Discrepancies between, e.g., net income on the income statement and net income on the cash flow statement are critical failures.",
+      "good": "The same item shows a consistent value everywhere it appears.",
+      "bad": "The same item shows different values in different locations throughout the model."
+    },
+    {
+      "name": "No unused formatting",
+      "description": "Formatting (color, borders, styles) should not be left on empty cells. Formatting that deliberately continues a pattern from adjacent cells - for example a formatted separator row between model sections - is acceptable.",
+      "good": "Formatting is confined to cells with content or only used as a continuation of formatting from other cells (e.g., formatted separation row between model parts).",
+      "bad": "Unused formatting appears on empty cells."
+    },
+    {
+      "name": "Clean Name Manager",
+      "description": "The Name Manager should contain only current, actively referenced defined names. Orphaned or outdated entries should be removed before delivery. Hidden names generated by Excel or by add-ins are not counted against this item.",
+      "good": "The Name Manager holds only current, in-use names.",
+      "bad": "Unused, outdated, or #REF! defined names remain in the Name Manager (hidden names in the Name Manager do not count in that sense and will not lead to a disqualification)."
+    },
+    {
+      "name": "Dedicated check rows",
+      "description": "Dedicated check rows should validate key calculations (e.g., totals tying, balance sheet balancing) so internal consistency is visible at a glance.",
+      "good": "Dedicated check rows validate key calculations and surface inconsistencies.",
+      "bad": "The reader must manually re-derive totals or trace formulas to verify internal consistency; no rows surface pass/fail status."
+    },
+    {
+      "name": "Error-check sheet",
+      "description": "A dedicated error-check sheet or summary should centralize integrity tests (balance checks, cash tie, roll-forward checks) and automatically flag issues.",
+      "good": "A dedicated error-check sheet centralizes tests and flags issues automatically.",
+      "bad": "Check formulas, if they exist, live on the same sheets as the calculations they test, so a reviewer must tab through the entire workbook to assess integrity."
+    },
+    {
+      "name": "Master error flag",
+      "description": "A master error flag on the cover or summary page should use conditional formatting (e.g., turning red) to instantly indicate whether any check is failing.",
+      "good": "A master error flag on the cover/summary instantly signals any failing check.",
+      "bad": "No master error flag on the cover/summary."
+    },
+    {
+      "name": "Consistent units",
+      "description": "Units must be consistent across the model (e.g., all in $mm or all in $000s). No mixing of scales. Where a different unit is genuinely appropriate (e.g., price per unit, headcount, or a per-share figure), it must be labeled explicitly.",
+      "good": "Units are consistent across the model with no mixing of scales; where a different unit is genuinely appropriate (e.g., price per unit or a per-share figure), it is labeled explicitly.",
+      "bad": "Units or scales are mixed without labeling (e.g., $mm in one place, $000s in another)."
+    },
+    {
+      "name": "Units carried through correctly",
+      "description": "Units defined on the assumptions sheet must carry through correctly to calculation and output sheets with no mid-model scale changes. Scale changes that might be necessary to bring all units on the calculations sheet to the same magnitude are okay.",
+      "good": "Assumption units carry through to calculations and outputs unchanged.",
+      "bad": "Units are not carried through correctly; a scale change (that is not needed to bring all units on the calculations sheet to the same magnitude) occurs mid-model."
+    },
+    {
+      "name": "Justified repeated calculations",
+      "description": "The same calculation should not be computed in more than one place unless there is a clear reason (e.g., display on multiple tabs with a cell reference, not a re-derivation).",
+      "good": "Calculations are not repeated; any duplication is justified and uses cell references.",
+      "bad": "The same calculation is re-derived in multiple places without justification."
+    }
+  ],
+  "Flexibility": [
+    {
+      "name": "Multi-unit coverage",
+      "description": "When multiple business units, divisions, or locations are in scope, the model should use a segmented structure with consolidation logic and, where applicable, inter-company eliminations and transfer pricing. A single-unit case satisfies this item by default.",
+      "good": "Multiple units are handled with a segmented structure, proper consolidation, and inter-company eliminations or transfer pricing where applicable - or the case involves a single unit, in which case the item is satisfied by default.",
+      "bad": "Multiple units are in scope but the model lacks segmentation, consolidation logic, or required eliminations."
+    },
+    {
+      "name": "M&A / divestiture flexibility",
+      "description": "Unless the case rules out future M&A or divestitures, the model should accommodate adding or divesting business units without a structural rebuild.",
+      "good": "Units can be added or divested without rebuilding the model - or M&A/divestiture need is ruled out in the case context. If the case rules this out, this item is satisfied by default.",
+      "bad": "M&A or divestiture is foreseeable in the case context, but adding or removing a unit would require a structural rebuild."
+    },
+    {
+      "name": "Capitalization switches",
+      "description": "Where the case warrants alternative accounting treatment, switches (flags) should allow assets to be capitalized or expensed without rebuilding the model. A case that never requires such a treatment change satisfies this item by default.",
+      "good": "Switches allow the capitalize-versus-expense treatment to be changed where the case warrants it - or the case does not require such treatment changes.",
+      "bad": "The case warrants capitalize-versus-expense analysis, but no switches exist and the change would require a rebuild."
+    },
+    {
+      "name": "Reuse as planning tool",
+      "description": "If the model was created to evaluate a business opportunity and later reuse (e.g., as an ongoing planning tool) is foreseeable, the design should support that reuse. If no reuse is foreseeable (i.e. ruled out in the instructions), the item is satisfied by default.",
+      "good": "Design supports both initial evaluation and foreseeable later reuse (e.g., as a planning tool) - or no ongoing reuse is foreseeable.",
+      "bad": "Design suits only one-time evaluation despite a foreseeable need for ongoing reuse."
+    },
+    {
+      "name": "Time-period flexibility",
+      "description": "Assumptions and time periods must be updated (rolled forward, extended, or re-granularized) without manual rework.",
+      "good": "Assumptions and periods update easily; the model rolls forward without rework.",
+      "bad": "Updating periods or rolling forward requires extensive manual rework."
+    },
+    {
+      "name": "Driver-based, formula-linked architecture",
+      "description": "The model should be driver-based and formulaic so that changes to inputs or additions of new line items can be made quickly.",
+      "good": "The model is driver-based and formulaic; changes and additions are quick.",
+      "bad": "The model relies on hardcoded values or rigid structures that require manual rework to update or extend."
+    }
+  ],
+  "Formatting": [
+    {
+      "name": "Actuals vs. forecast demarcation",
+      "description": "Actuals (historical, fixed) and forecasts (editable, driver-based) should be clearly separated by labeling, formatting or a vertical divider so the transition point is obvious.",
+      "good": "Actuals and forecasts are clearly separated; the transition point is obvious.",
+      "bad": "Actuals and forecasts look identical, are not labeled, and/or the transition point is unclear."
+    },
+    {
+      "name": "Input cells marked",
+      "description": "Input cells must be visually marked (color, shading, border) so users immediately know where they can safely enter values.",
+      "good": "Input cells are clearly marked as safe-to-edit.",
+      "bad": "Input cells are not distinguished from formula cells via formatting."
+    },
+    {
+      "name": "Input cells data validation",
+      "description": "Key input cells should use data validation to constrain entries to allowable ranges or types, warning the user when an entry falls outside the range deemed appropriate.",
+      "good": "Key input cells use data validation to constrain entries to sensible ranges, types, or lists, so an out-of-range entry is rejected or flagged at the point of entry.",
+      "bad": "Input cells accept any entry; no data validation constrains values, types, or lists, even where an out-of-range entry would break the model silently."
+    },
+    {
+      "name": "Reasonable number formats",
+      "description": "Number formats should be reasonable: no excess decimals, currency symbols where needed, thousands separators applied.",
+      "good": "Number formats are sensible and professional.",
+      "bad": "Number formats are unreasonable (e.g., excess decimals, missing symbols or separators)."
+    },
+    {
+      "name": "Consistent number formats",
+      "description": "Number formats must be consistent across the model for comparable values.",
+      "good": "Number formats are consistent for comparable values across the model (also consistent is the number of shown decimals for comparable values).",
+      "bad": "Number formats vary inconsistently for comparable values."
+    },
+    {
+      "name": "No bright-yellow highlighting",
+      "description": "Bright yellow highlighting used during model construction to flag TBD, placeholder, or work-in-progress items must be entirely removed from the final deliverable. This does not apply to yellow used intentionally in the delivered model for a defined purpose - for example conditional formatting on error-check rows, a documented convention for marking input cells, or flagging assumptions that require periodic review - provided such usage is to be explained in the model's glossary or conventions guide.",
+      "good": "No bright yellow cells signaling unfinished or placeholder work remain in the final product. Any yellow used intentionally for a documented, ongoing purpose (e.g., error-check conditional formatting, marked input cells, flagged review items) is explained in the glossary or conventions.",
+      "bad": "Cells with bright yellow fill that appear to mark unfinished, placeholder, or TBD items remain in the delivered workbook, signaling incomplete work - or yellow is used for an ongoing purpose but is not documented in the glossary, making it indistinguishable from leftover WIP markers."
+    },
+    {
+      "name": "Blue font for hardcoded inputs",
+      "description": "Hardcoded inputs must use blue font per industry-standard color coding.",
+      "good": "Hardcoded inputs consistently use blue font.",
+      "bad": "Inputs do not use blue font."
+    },
+    {
+      "name": "Black font for calculations",
+      "description": "Formulas and calculations must use black font per industry-standard color coding.",
+      "good": "Formulas and calculations consistently use black font.",
+      "bad": "Calculations do not use black font."
+    },
+    {
+      "name": "Green font for cross-sheet links",
+      "description": "Cells linking to other sheets should use green font per industry-standard color coding.",
+      "good": "Cross-sheet links consistently use green font.",
+      "bad": "Cross-sheet links do not use green font."
+    },
+    {
+      "name": "Red font for external links",
+      "description": "Cells containing external links (references to other workbooks) should use red font per industry-standard color coding. If the model contains no external links, this item is satisfied by default.",
+      "good": "External links consistently use red font - or no external links exist (satisfied by default).",
+      "bad": "External links are present but do not use red font, making them indistinguishable from internal formulas or cross-sheet links."
+    },
+    {
+      "name": "Consistent color coding",
+      "description": "The color-coding scheme (blue inputs, black formulas, green links, red external links) must be applied consistently throughout. Inconsistent color coding is worse than none.",
+      "good": "Color coding is applied consistently across the entire model. Cell purpose is immediately clear from color alone.",
+      "bad": "Color coding is applied inconsistently, making cell types unreliable to identify by color."
+    },
+    {
+      "name": "Consistent formatting",
+      "description": "Formatting (fonts, sizes, alignment, borders, section styling) should be consistent across all sheets. Compare across sheets, not just within a single sheet.",
+      "good": "The same font family, sizing, and styling are used consistently across all sheets for comparable content.",
+      "bad": "Different sheets use different fonts, sizes, or styles for comparable content."
+    },
+    {
+      "name": "Limited color palette",
+      "description": "The number of additional colors used beyond the industry-standard blue/black/green/red convention should be limited to a small, cohesive palette rather than a wide variety of different colors.",
+      "good": "Only a limited number of additional colors (or none) are used as font color (beyond the industry-standard blue/black/green/red convention), background color, and tab color, forming a cohesive palette rather than a rainbow of different hues.",
+      "bad": "A wide variety of different colors is used throughout the model, creating an unprofessional, overly colorful appearance."
+    },
+    {
+      "name": "No colors that mimic standard coding",
+      "description": "Additional colors must not closely resemble the standard blue/black/green/red coding, which would mislead the reader about cell types.",
+      "good": "No additional colors closely resemble the blue, black, green or red used in the industry-standard color-coding convention.",
+      "bad": "Colors are used that closely resemble the industry-standard color coding, making it unreliable to identify cell types by color."
+    },
+    {
+      "name": "Minimal non-standard color usage",
+      "description": "The number of cells and elements carrying additional color formatting (beyond cells subject to the industry-standard color coding) should be limited to avoid visual clutter and distraction from the intentional coding scheme.",
+      "good": "Only a limited number of cells and elements beyond those subject to industry-standard color coding carry additional color formatting (font, background, or tab color).",
+      "bad": "Too many cells or elements are colored beyond the standard coding scheme, creating visual clutter that distracts from the intentional color-coding."
+    },
+    {
+      "name": "Sparing conditional formatting",
+      "description": "Conditional formatting should be limited to error-check rows, data-validation indicators, and threshold alerts, and must not override the blue/black/green/red color-coding convention.",
+      "good": "Conditional formatting is limited and does not conflict with the color-coding scheme.",
+      "bad": "Conditional formatting overrides color coding, making cell types unreliable to identify by color."
+    },
+    {
+      "name": "Sparing border usage",
+      "description": "Borders should be used sparingly to partition sections and separate key areas of the model. Excessive border usage creates a cluttered, unprofessional look.",
+      "good": "Borders are used sparingly to partition sections; the model has a clean, uncluttered appearance.",
+      "bad": "Excessive borders are applied throughout the model, creating a cluttered and unprofessional look."
+    },
+    {
+      "name": "Header & title shading",
+      "description": "Shading (cell fill color) should be used consistently to highlight headers and titles only, making them visually distinct from data rows.",
+      "good": "Shading is applied consistently to headers and titles only, making headings visually distinct from data rows in a professional manner.",
+      "bad": "Shading is applied excessively across many rows or sections, or headings are not visually distinct from data rows."
+    },
+    {
+      "name": "Totals visually distinguished",
+      "description": "Totals and subtotals should be bolded or otherwise visually distinguished from regular line items.",
+      "good": "Totals and subtotals are visually distinguished (e.g., bolded, underlined).",
+      "bad": "Totals and subtotals are indistinguishable from regular line items."
+    },
+    {
+      "name": "Consistent zoom level",
+      "description": "Every sheet should use the same zoom level across the entire workbook (commonly 75%, 80%, or 100%) so the model does not jump in scale when navigating between tabs.",
+      "good": "All sheets use the same zoom level (commonly 100%, 80%, or 75%), providing a consistent viewing experience.",
+      "bad": "Zoom levels vary across sheets, creating an inconsistent and unprofessional viewing experience."
+    },
+    {
+      "name": "Active cell reset to A1 on all sheets",
+      "description": "The cursor should be parked at cell A1 (or the sheet's designated home cell) on every sheet before delivery, so that each tab opens at its intended starting position.",
+      "good": "The cursor is parked at A1, or at the sheet's designated home cell; each tab opens at its intended starting position.",
+      "bad": "The cursor is left mid-sheet on one or more tabs, causing sheets to open at unexpected positions."
+    },
+    {
+      "name": "Text left-aligned",
+      "description": "Text values should be left-aligned, with one standard exception: column headers above numeric columns (e.g., period labels such as 'FY2024A') may be right-aligned or centered so they align with the values beneath them.",
+      "good": "Body text and row labels are left-aligned; column headers over numeric columns may instead be right- or center-aligned.",
+      "bad": "Text alignment is inconsistent or arbitrary (e.g., row labels right-aligned)."
+    },
+    {
+      "name": "Numbers right-aligned",
+      "description": "Numerical values should be right-aligned within their cells.",
+      "good": "Numerical values are right-aligned.",
+      "bad": "Numerical values are not consistently right-aligned."
+    },
+    {
+      "name": "Negatives in parentheses",
+      "description": "Negative values should be displayed in parentheses, not with a minus sign, per finance convention.",
+      "good": "Negative values use parentheses, e.g., (123).",
+      "bad": "Negative values use a minus sign, e.g., -123."
+    },
+    {
+      "name": "Zeros as dashes",
+      "description": "Zero values should be displayed as dashes (-) rather than '0' per finance convention.",
+      "good": "Zero values display as dashes.",
+      "bad": "Zero values display as '0'."
+    },
+    {
+      "name": "Thousands separators",
+      "description": "Monetary and other (large) quantity values should be formatted with a thousands separator. Values that conventionally carry none - years (2024, not 2,024), percentages, valuation multiples (e.g., 7.5x), and per-unit figures - are excluded.",
+      "good": "Thousands separators are applied to monetary and quantity values; years, percentages, multiples, and per-unit figures correctly carry none.",
+      "bad": "Large monetary/quantity values lack thousands separators, or separators are wrongly applied (e.g., years shown as 2,024)."
+    },
+    {
+      "name": "Currency stated",
+      "description": "The currency used in the model must be clearly stated as a unit, and stated per block or column, especially in cases where FX is involved.",
+      "good": "The currency is clearly stated as a unit, including for each block or column.",
+      "bad": "The currency is not stated, leaving values ambiguous."
+    },
+    {
+      "name": "Sufficient column widths",
+      "description": "Column widths must be sufficient to display all values without truncation or '###'.",
+      "good": "All values display fully; no truncation or '###'.",
+      "bad": "Some columns truncate values or show '###'."
+    },
+    {
+      "name": "Reasonable column widths",
+      "description": "Column widths should not be excessive.",
+      "good": "Columns are no wider than their content requires; several full-width columns fit on screen at once, and long text is wrapped rather than accommodated by widening the column.",
+      "bad": "The model contains excessively wide columns (rule of thumb: wider than roughly 75-80 characters at the default font), or long text is left unwrapped."
+    },
+    {
+      "name": "Consistent column widths",
+      "description": "Calculation columns on a sheet should share a consistent width. Header/text/unit columns may be wider.",
+      "good": "Calculation columns share a consistent width.",
+      "bad": "Calculation column widths vary inconsistently."
+    },
+    {
+      "name": "Consistent row heights",
+      "description": "Row heights should be consistent within each tab.",
+      "good": "Row heights are consistent within each tab - Header rows may be higher.",
+      "bad": "Row heights vary within a tab (exception: header rows)."
+    },
+    {
+      "name": "Reasonable row heights",
+      "description": "Row heights should not be excessive.",
+      "good": "Row heights are reasonable - by default, rows should be only one line high. While rows higher than one line are acceptable, they should be used sparingly.",
+      "bad": "The model contains excessively tall rows (rule of thumb: taller than roughly 60 points)."
+    },
+    {
+      "name": "No merged cells",
+      "description": "Merged cells break Excel's grid logic (broken formulas, sorting failures, reference errors). Use Center Across Selection instead to preserve grid integrity.",
+      "good": "No merged cells; Center Across Selection is used where needed.",
+      "bad": "Merged cells are present. (Merged cells on the Instructions Tab are allowed)"
+    },
+    {
+      "name": "Print areas set",
+      "description": "Print areas should be defined on each tab so that only relevant content is included when the sheet is printed or exported to PDF.",
+      "good": "Print areas are defined on each tab, ensuring only relevant content prints.",
+      "bad": "Print areas are not defined; printing captures empty space, extraneous content, or misses relevant content."
+    },
+    {
+      "name": "Page breaks set",
+      "description": "Page breaks should be configured so that each tab prints legibly as PDF or hard copy without splitting tables, sections, or key content awkwardly across pages.",
+      "good": "Page breaks are set so that tabs print legibly without splitting tables or sections across pages.",
+      "bad": "Page breaks are not set or are poorly placed; tables or sections split awkwardly across pages when printed."
+    },
+    {
+      "name": "File extension (.xlsx)",
+      "description": "The workbook should be saved in a standard Excel format: .xlsx, or .xlsm where VBA/macros are present.",
+      "good": "The workbook is saved as .xlsx (.xlsm when VBA/Macros are present).",
+      "bad": "The workbook is saved in a legacy or non-standard format (e.g., .xls, .csv, or an export from another spreadsheet application)."
+    }
+  ],
+  "Formulas": [
+    {
+      "name": "Use standard formula set",
+      "description": "The model should avoid non-standard, uncommon formulas (e.g., FILTERXML, WEBSERVICE, Recursive LAMBDA) that are atypical in financial modeling.",
+      "good": "Only standard financial-modeling formulas are used.",
+      "bad": "Uncommon or non-standard formulas (e.g., FILTERXML, WEBSERVICE, recursive LAMBDA) are present where standard alternatives exist."
+    },
+    {
+      "name": "Modern formula usage",
+      "description": "Modern functions should be preferred where they improve robustness or readability and where backward compatibility is not a constraint: XLOOKUP over VLOOKUP, IFS or SWITCH over deeply nested IFs, and LET for readable intermediate variables. INDEX/XMATCH remains a fully acceptable professional standard and is not penalized. Unless the case context states otherwise, assume the client uses a current version of Excel; where an older version must be supported, the legacy equivalents are acceptable, and the trade-off should be documented.",
+      "good": "Modern functions (XLOOKUP, XMATCH, IFS, SWITCH, LET) are used where they improve robustness and readability - or a legacy equivalent is used for a documented compatibility or performance reason, for example INDEX/XMATCH or nested IFs in a very large model, where they compute more efficiently than IFS or SWITCH (in that case efficiency > auditability).",
+      "bad": "Fragile legacy constructs are used where a modern equivalent is clearly preferable and no compatibility or performance reason is given - most commonly VLOOKUP with a hardcoded column index, or IFs nested many levels deep."
+    },
+    {
+      "name": "Avoid volatile functions",
+      "description": "Volatile functions (INDIRECT, OFFSET, TODAY, NOW, RAND, RANDBETWEEN, INFO, CELL) recalculate on every change and should be avoided where possible.",
+      "good": "Volatile functions are avoided except where clearly justified (e.g., date-stamping).",
+      "bad": "Volatile functions are present where avoidable."
+    },
+    {
+      "name": "No hardcoded numbers in formulas",
+      "description": "Formulas must reference assumption cells rather than embedding constants (e.g., =B5*0.21). The only accepted exceptions are purely mathematical constants (12 months, 365 days, 100 for percentage conversion) and technical remnants that are not true inputs.",
+      "good": "Formulas reference assumption cells; no inputs are buried as constants inside formulas.",
+      "bad": "Formulas contain hardcoded numbers (e.g., =B5*0.21) that should be assumption references."
+    },
+    {
+      "name": "Simple, stepwise formulas",
+      "description": "Formulas should be simple, readable, and broken into logical steps using helper columns, helper rows, or LET. As a practical guideline, a formula nesting more than about three functions deep ('3-clause rule') should be split. Some complexity is acceptable where splitting would bloat the model structure.",
+      "good": "Complex logic is broken into steps via helper rows/columns or LET. No formula nests more than about ~three functions deep without justification.",
+      "bad": "Monolithic mega-formulas obscure logic. No helper columns when clearly needed. Difficult to understand or debug."
+    },
+    {
+      "name": "Consistent formulas across blocks",
+      "description": "Formulas across a row (the timeline) and across similar blocks should be identical so that copy-paste works and exceptions are immediately obvious.",
+      "good": "Formulas are consistent across the timeline and across similar blocks.",
+      "bad": "Formulas vary unexpectedly across a row or between comparable blocks."
+    },
+    {
+      "name": "Inconsistent formulas flagged",
+      "description": "Where formulas must be inconsistent (e.g., the first period of a roll-forward), the cells should be visually flagged (distinctive fill, exception-marker column, cell comment, or error-check flag) so reviewers know the break is intentional.",
+      "good": "Intentional formula breaks are clearly flagged visually.",
+      "bad": "Formula inconsistencies are unmarked, leaving reviewers unable to distinguish intentional exceptions from errors."
+    },
+    {
+      "name": "Correct reference anchoring",
+      "description": "Absolute, relative, and mixed references ($) must be anchored correctly. Incorrect anchoring silently pulls wrong data when formulas are copied, without producing a visible Excel error.",
+      "good": "References are anchored correctly; copied formulas pull the intended cells.",
+      "bad": "References are mis-anchored; copying formulas silently pulls wrong data."
+    },
+    {
+      "name": "Consistent reference anchoring",
+      "description": "Anchoring conventions ($) should be applied consistently across comparable formulas/blocks.",
+      "good": "Anchoring is consistent across comparable formulas/blocks.",
+      "bad": "Anchoring conventions are inconsistent across comparable formulas or blocks."
+    },
+    {
+      "name": "Avoid whole-column references",
+      "description": "Whole-column/row references (e.g., SUM(A:A)) force Excel to evaluate up to a million rows per formula. Use defined ranges, TrimRef (e.g., A:.A), table columns, or names instead.",
+      "good": "Defined or structured ranges are used; no whole-column/row references.",
+      "bad": "Whole-column/row references (e.g., SUM(A:A)) are present."
+    }
+  ],
+  "Model Outputs & Executive Summary": [
+    {
+      "name": "Output reasonableness check",
+      "description": "Outputs should pass a directional sense check against intuition, industry benchmarks, comparable companies or transactions, or third-party estimates. The metrics to check depend on the model type - growth and margins for an operating model, IRR and money multiple for a transaction model, debt service cover for project finance, payback and NPV for a capex case, implied multiples for a valuation. The sense check is part of the model, not a separate exercise.",
+      "good": "The model includes an explicit sense-check section comparing its key outputs to benchmarks, comparables, or third-party estimates, using metrics appropriate to the model type.",
+      "bad": "Outputs are implausible or inconsistent with benchmarks - or no sense check is present."
+    },
+    {
+      "name": "Key ratios & outputs section",
+      "description": "The model should include a key-ratios section computing the output metrics relevant to its purpose - for example margins, returns, leverage and cover ratios, growth rates, valuation multiples, or transaction returns.",
+      "good": "A dedicated section computes the key ratios and output metrics relevant to the model's purpose.",
+      "bad": "No key-ratios or output metrics section."
+    },
+    {
+      "name": "Cross-scenario summary",
+      "description": "A summary should display results across all scenarios/cases in one place. A model that deliberately runs a single case satisfies this item by default.",
+      "good": "A summary displays results across all cases in one view - or the model deliberately runs a single case.",
+      "bad": "No cross-case summary; results are buried in separate sheets."
+    },
+    {
+      "name": "Automated summary",
+      "description": "The summary page should update automatically when inputs change; manual summaries go stale.",
+      "good": "The summary updates automatically with any input change.",
+      "bad": "Summary values are hardcoded or copy-pasted rather than formula-linked; changing an input does not propagate to the summary."
+    }
+  ],
+  "Potential Dangers": [
+    {
+      "name": "No hidden sheets",
+      "description": "The file should be free of hidden or very hidden sheets. Any legitimate hidden sheet must be disclosed.",
+      "good": "No hidden or very hidden sheets, or any present are disclosed and justified.",
+      "bad": "Undisclosed hidden or very hidden sheets are present."
+    },
+    {
+      "name": "No hidden rows/columns",
+      "description": "The file should be free of hidden rows or columns. Use grouping instead of hiding.",
+      "good": "No hidden rows or columns; grouping is used where collapsing is needed.",
+      "bad": "Hidden rows or columns are present."
+    },
+    {
+      "name": "No white-on-white hiding",
+      "description": "No content should be concealed by formatting - in particular white font on a white background, or a number format that renders a populated cell blank.",
+      "good": "No content is concealed by white-on-white formatting or by a blanking number format.",
+      "bad": "Content is concealed via white-on-white formatting or a number format that hides the value."
+    },
+    {
+      "name": "No external links",
+      "description": "The file should be free of external links to other workbooks (unless the case context requires them), as they can break when the linked file moves, cause #REF! errors, and hide dependencies.",
+      "good": "No external links (unless required by the case context/stated in the instructions); the file is self-contained.",
+      "bad": "External links to other workbooks are present."
+    },
+    {
+      "name": "Macros/VBA disclosed",
+      "description": "Any macros or VBA code must be disclosed, reviewed, and justified. Macros add complexity, security risk, and maintenance burden and should therefore be avoided.",
+      "good": "No macros/VBA, or any present are disclosed, reviewed, and justified.",
+      "bad": "Undisclosed or unjustified macros/VBA are present."
+    },
+    {
+      "name": "VBA vs. native alternatives",
+      "description": "Where VBA is present, evaluate whether it could be replaced by native Excel tools (e.g., array formulas instead of loops, data validation instead of custom dialogs). A file without VBA satisfies this item by default.",
+      "good": "No VBA is present, or any VBA is genuinely necessary and not replaceable by native tools.",
+      "bad": "VBA is present and duplicates what native Excel tools could achieve."
+    },
+    {
+      "name": "Consistent sign convention",
+      "description": "A single sign convention (e.g., costs negative, revenues positive) must be applied consistently across the entire model, with particular attention to EBITDA add-backs, cash flow statement conventions, and income statement expense treatment.",
+      "good": "Sign conventions are consistent across the model.",
+      "bad": "The same economic item carries different signs depending on where it appears (e.g., D&A is negative on the income statement but also negative in the EBITDA reconciliation instead of being added back as positive)."
+    },
+    {
+      "name": "No errors under extreme-but-plausible inputs",
+      "description": "The model should still work when key assumptions are changed substantially (e.g., useful life tripled, valuation date shifted 12 months, revenue halved). Stress-testing exposes hidden breaks, balance sheet imbalances, divide-by-zero errors, and broken roll-forwards.",
+      "good": "The model produces sensible results under stress scenarios (e.g., revenue halved, useful life tripled, valuation date shifted). No Excel errors or balance-sheet imbalances emerge.",
+      "bad": "Under stress, the model breaks, produces balance sheet imbalances, throws Excel errors, or generates nonsensical results (e.g., negative useful life, or negative shares outstanding)."
+    },
+    {
+      "name": "Automatic calculation mode",
+      "description": "The workbook should be delivered with calculation set to automatic - and, where intentional circularity requires it, with iterative calculation enabled and that requirement stated. Manual calculation mode means displayed values may not reflect the inputs currently shown.",
+      "good": "Calculation is set to automatic, with iterative calculation enabled and documented where the model uses intentional circularity.",
+      "bad": "The workbook is saved in manual calculation mode without disclosure, so displayed values may be stale - or iterative calculation is required but not enabled."
+    }
+  ],
+  "Purpose & Scope": [
+    {
+      "name": "Architecture suited to audience",
+      "description": "The model's architecture should match the technical sophistication and needs of its end users (e.g., an investor-facing valuation model differs from an internal planning tool).",
+      "good": "Architecture matches the intended audience's sophistication and needs.",
+      "bad": "Architecture is mismatched to its audience (over- or under-engineered for end users)."
+    },
+    {
+      "name": "Structure fits purpose",
+      "description": "The overall structure (calculation flow, number of worksheets, level of detail) should be appropriate for the model's stated purpose.",
+      "good": "Structure is well-suited to the model's purpose: logical calculation flow, appropriate number of worksheets, and the right level of detail for the stated purpose.",
+      "bad": "Structure is inappropriate (illogical flow, too many or too few sheets, mismatched detail level)."
+    }
+  ],
+  "Rounding": [
+    {
+      "name": "Full precision in intermediates",
+      "description": "Intermediate calculations must retain full precision; round only the final outputs presented to users. Display formatting (e.g., showing 0 decimals) is acceptable, as it does not change the underlying value. Rounding inside the model is legitimate only where the quantity is genuinely discrete (e.g., headcount, units sold, share counts) or where a contract or the case context specifies it.",
+      "good": "Intermediate calculations retain full precision; rounding is applied only to outputs, to genuinely discrete quantities, or where the case context requires it.",
+      "bad": "Intermediate calculations are rounded without justification, compounding precision errors through the model."
+    },
+    {
+      "name": "Rounded outputs",
+      "description": "Final outputs should be rounded to a sensible precision that communicates the appropriate level of certainty. (Rounding precision might be dictated for the questions)",
+      "good": "Final outputs are rounded to a sensible, readable precision.",
+      "bad": "Final outputs show full, false precision."
+    },
+    {
+      "name": "Rounding documented",
+      "description": "Rounding conventions should be documented in visible proximity to the rounded figure (e.g., '$ in millions, rounded to nearest $0.1m').",
+      "good": "Rounding conventions are documented next to the rounded figures.",
+      "bad": "Rounding is undocumented or stated far from the figures."
+    }
+  ],
+  "Structure": [
+    {
+      "name": "Essential components present",
+      "description": "The model should include all essential components: cover page, table of contents, summary/dashboard, assumptions, scenarios (where applicable), calculation sheets, financial statements (where applicable), error-check sheet, and output data. Components should be scaled to the model's size and purpose; in a small model several may reasonably sit on fewer sheets, provided each function remains clearly delineated.",
+      "good": "All essential components are present: cover, table of contents, summary, assumptions, scenarios (if applicable), calculations, statements (if applicable), error-check sheet, and outputs - or, in a small model, these functions are clearly delineated across fewer sheets.",
+      "bad": "One or more essential components are missing."
+    },
+    {
+      "name": "Cover sheet first",
+      "description": "The cover sheet should be the first tab, setting context and orienting the user on opening - typically stating the model's title, purpose, owner, version, and date.",
+      "good": "The cover sheet is the first tab and states the model's title, purpose, owner, version, and date.",
+      "bad": "The cover sheet is missing, is not the first tab, or omits basic identifying information."
+    },
+    {
+      "name": "Timeline orientation",
+      "description": "Within calculation tabs, the timeline should run horizontally as standard - periods across columns, line items down rows - and be applied consistently. Period columns should align across tabs, so that a given column refers to the same period everywhere in the workbook (given no time period length shift). A vertical timeline (periods down rows) is acceptable where the tab's content justifies it, but should not be the default.",
+      "good": "Timeline runs horizontally on all calculation tabs, with periods occupying identical columns across the workbook. Where a vertical orientation is used, it is justified by the content - typically a register or data table where each record needs several attribute columns (ID, currency, rate, source, flags) visible simultaneously, and the number of periods is small enough to scan without excessive scrolling. The choice is consistent within each tab, and the reason for any deviation is evident from the tab itself.",
+      "bad": "Orientation is mixed within a single tab, or varies across tabs with no rationale. Period columns are misaligned between tabs (e.g. Jan-24 sits in column H on one sheet and column K on another), creating link risk. A vertical timeline is used by default, forcing constant vertical scrolling to compare periods and breaking the copy-right formula convention. Alternatively, a horizontal timeline is forced onto a record-based table, pushing essential attribute columns off-screen."
+    },
+    {
+      "name": "Vertical alignment of same-type data",
+      "description": "Columns and rows containing the same type of information should be aligned vertically across the sheet, with a logical flow in the alignment of different calculations.",
+      "good": "Same-type columns and rows are aligned vertically, and the arrangement of different calculations follows a logical flow.",
+      "bad": "Similar information is misaligned vertically; the arrangement of calculations lacks a logical flow."
+    },
+    {
+      "name": "Label-to-value alignment",
+      "description": "Subtitles, categories, and calculation names should be aligned with their respective values so the reader can clearly associate each label with the data it describes.",
+      "good": "Subtitles, categories, and calculation names are aligned with their respective values; associations are immediately clear.",
+      "bad": "Labels are offset from or misaligned with their respective values, making it unclear which label belongs to which data."
+    },
+    {
+      "name": "Best-fit structure for stated purpose",
+      "description": "Beyond being merely acceptable, the structure should be the best fit given the model's specific requirements, audience, and foreseeable future uses. This item fails only where a clearly better alternative exists and can be articulated.",
+      "good": "The structure is well-justified as the best choice for the model's requirements, audience, and foreseeable future uses.",
+      "bad": "A clearly better structure exists for the model's requirements, audience, or foreseeable uses, and the chosen structure creates avoidable friction."
+    },
+    {
+      "name": "Deal vs. planning orientation",
+      "description": "The structure (calculation architecture) should reflect whether the model is for one-time deal evaluation or ongoing planning, as these require different data-refresh cadence, flexibility, and reporting depth.",
+      "good": "Structure (calculation architecture) matches the model's deal-evaluation or ongoing-planning purpose.",
+      "bad": "Structure does not match the deal-vs-planning intent."
+    },
+    {
+      "name": "Real fiscal year handling",
+      "description": "The model must handle the entity's real fiscal calendar, including non-calendar year-ends (e.g., July-June). Where the case context specifies no fiscal calendar, a calendar-year assumption is acceptable provided it is stated.",
+      "good": "The model correctly reflects the entity's fiscal year, including non-calendar year-ends - or no fiscal calendar is specified and the assumption used is stated.",
+      "bad": "The model assumes a calendar year where the case context specifies a different fiscal year-end, or the assumption is left unstated."
+    },
+    {
+      "name": "Stub period handling",
+      "description": "Stub periods (partial periods at the start or end of a forecast) must be calculated correctly using a day-count convention (actual/365, actual/360, 30/360) appropriate to the model's purpose, the case context/instructions, and the jurisdiction. A model whose periods are all full periods satisfies this item by default.",
+      "good": "Stub periods are calculated correctly with an appropriate day-count convention - or the model contains no stub periods.",
+      "bad": "Stub periods arise but are mishandled or ignored."
+    },
+    {
+      "name": "Functional sheet separation",
+      "description": "Cover, inputs, calculations, analyses, and outputs should each sit on separate sheets with no function mixing on a single sheet (unless there is a clear structural reason).",
+      "good": "Each function sits on its own sheet with no mixing (unless there is a clear structural reason).",
+      "bad": "Functions are mixed on the same sheet (e.g., inputs and calculations together)."
+    },
+    {
+      "name": "Logical tab order",
+      "description": "Tabs should be ordered to follow model flow: cover \u2192 table of contents \u2192 assumptions/inputs \u2192 calculations \u2192 (financial statements) \u2192 (analyses/scenarios) \u2192 outputs/summary \u2192 error checks.",
+      "good": "Tabs follow a clear model flow from cover to inputs to calculations to statements to outputs to error checks.",
+      "bad": "Tabs are out of model-flow order."
+    },
+    {
+      "name": "Functional calculation sections",
+      "description": "Calculations should be split into clearly labeled functional sections (e.g., Revenue, COGS, OpEx, CapEx, Debt, Equity).",
+      "good": "Calculations are grouped into clear functional sections.",
+      "bad": "Calculations are not sectioned; all items are mixed together."
+    },
+    {
+      "name": "Buffer rows for totals",
+      "description": "Buffer rows or columns should sit above/beside totals so new line items can be inserted without breaking SUM formulas.",
+      "good": "Buffer rows/columns let new items be inserted without breaking totals.",
+      "bad": "No buffers; inserting line items breaks total formulas."
+    },
+    {
+      "name": "Buffer rows between sections",
+      "description": "Major sections should be separated by buffer rows for visual clarity.",
+      "good": "Major sections are separated by buffer rows.",
+      "bad": "Major sections run together without spacing."
+    },
+    {
+      "name": "Clear section headers",
+      "description": "Each major model component should have a clear, descriptive section header.",
+      "good": "Each major component has a clear section header.",
+      "bad": "Section headers are missing or unclear."
+    },
+    {
+      "name": "Consistent tab structure",
+      "description": "Similar tabs should share a consistent layout - same columns for headings, sub-headings, units, subtotals, etc.",
+      "good": "Similar tabs share a consistent layout.",
+      "bad": "Similar tabs use inconsistent column structures."
+    },
+    {
+      "name": "Freeze panes set",
+      "description": "Freeze panes keep labels and the timeline visible during scrolling. Freeze panes are also not excessively set - i.e. not more than 2/3 of a regular screen view should be blocked by freeze panes.",
+      "good": "Freeze panes keep labels and the timeline visible during scrolling while enough of the calculations is still visible.",
+      "bad": "Freeze panes are not set where needed; labels scroll out of view. Or freeze panes set excessively."
+    },
+    {
+      "name": "One timeline per sheet",
+      "description": "Each worksheet should contain only one timeline. Multiple timelines on one sheet create ambiguity about which period a calculation refers to. Where a sheet genuinely needs a second periodicity (e.g., an annual summary beneath a quarterly build), the blocks must be clearly separated and labeled.",
+      "good": "Each worksheet uses a single timeline - or any additional periodicity is clearly separated, labeled, and justified.",
+      "bad": "A worksheet contains multiple timelines that are interleaved or not clearly separated, labeled and justified."
+    },
+    {
+      "name": "Chronological left-to-right",
+      "description": "Columns should run chronologically from left to right - earliest periods on the left, furthest future on the right.",
+      "good": "Columns run chronologically left to right.",
+      "bad": "Columns are not in chronological order."
+    },
+    {
+      "name": "Time period headers",
+      "description": "Header rows should specify the time period for each column (e.g., FY2024, Q1 2025, Jan-25) so the reader immediately knows which period each column of data represents (for the modeling part).",
+      "good": "Header rows clearly specify the time period for each column.",
+      "bad": "Header rows omit or insufficiently label the time period for one or more columns."
+    },
+    {
+      "name": "Data-type designation (actuals vs. estimates)",
+      "description": "Header rows should indicate whether the data in each column consists of actual values, estimates/forecasts, or another type of data (e.g., by appending 'A' for actuals and 'E' for estimates, or using a separate designation row).",
+      "good": "Header rows clearly indicate whether values are actuals, estimates/forecasts, or another data type.",
+      "bad": "Header rows omit the actuals/estimates designation; the reader cannot distinguish historical from projected data."
+    },
+    {
+      "name": "Clear row labels",
+      "description": "Row labels should be clear, descriptive, professional, correctly spelled, and use standard financial terminology appropriate to the target audience.",
+      "good": "Row labels are clear, professional, correctly spelled, and use standard terminology.",
+      "bad": "Row labels are vague, unprofessional, misspelled, or use non-standard terms."
+    },
+    {
+      "name": "Clear column labels",
+      "description": "Column labels should be clear, descriptive, professional, correctly spelled, and use standard financial terminology appropriate to the target audience.",
+      "good": "Column labels are clear, professional, correctly spelled, and use standard terminology.",
+      "bad": "Column labels are vague, unprofessional, misspelled, or use non-standard terms."
+    },
+    {
+      "name": "Roll-forward (corkscrew) structure for balances",
+      "description": "Balance items that move over time - debt, cash, PP&E, working capital, equity, provisions, share count - should be built as explicit roll-forwards: opening balance, additions, deductions, closing balance, with each period's closing balance feeding the next period's opening balance. A model with no carried-forward balances satisfies this item by default.",
+      "good": "Balance items are built as explicit roll-forwards, with each movement on its own line and closing balances feeding the next period's opening balance - or the model carries no balances forward.",
+      "bad": "Balance items are computed in one compressed formula without showing opening balance, movements, and closing balance - or a period's opening balance does not equal the prior period's closing balance."
+    },
+    {
+      "name": "Circularity - valid justification",
+      "description": "Any circular reference in the model must have a clear, valid modeling reason (e.g., average debt balance, revolver sweep, iterative WACC, interest on average cash).",
+      "good": "Every circular reference in the model has a clear, valid modeling reason.",
+      "bad": "One or more circular references exist without a clear justification, indicating a formula error or poor model design."
+    },
+    {
+      "name": "Circularity - documentation",
+      "description": "Any intentional circular reference must be documented via cell comments or a model note explaining its purpose, the mechanics of the circularity, and how it resolves.",
+      "good": "Every intentional circular reference is documented with a comment or note explaining its purpose and mechanics.",
+      "bad": "Intentional circular references exist but are undocumented; reviewers cannot tell whether they are intentional or accidental."
+    },
+    {
+      "name": "Circularity breaker switch",
+      "description": "Where the model contains intentional circular references, each must have a circuit-breaker switch (a flag cell that toggles circularity off, replacing the circular formula with zero or a static value) for debugging. A model with no circularity satisfies this item by default.",
+      "good": "The model contains no circular references, or all intentional circular references have a circuit-breaker switch.",
+      "bad": "Intentional circular references exist but lack a circuit-breaker switch."
+    }
+  ]
+}

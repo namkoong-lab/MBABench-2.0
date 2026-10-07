@@ -1,0 +1,253 @@
+# ============================================================================
+# excel-agents infra — default config schema.
+#
+# This file defines EVERY configurable knob and its default.
+# To override anything, create a sibling `configs.yaml` (gitignored) for
+# machine-specific values (Chrome port, profile, OneDrive folder) and pass a
+# run config (--run-config) for the experiment (agent_model_name,
+# prompt_version, tasks).
+#
+# Merge order (later wins):
+#   1. configs.default.yaml       (this file)
+#   2. configs.yaml               (user global overrides)
+#   3. --run-config <file>        (the per-experiment overlay)
+#
+# Leaf form: each concrete setting is a dict with two keys:
+#     value:    the default (or "" / [] / null if none)
+#     required: true  -> must be truthy after merge, else ConfigError
+#               false -> may be empty; callers decide when it's needed
+#
+# Override form: in configs.yaml and run configs you may use EITHER the full
+# `{value: ...}` form or a raw scalar/list:
+#     browser:
+#       cdp_port: 9223           # raw — shorthand
+#       cdp_port: {value: 9223}  # full form — same effect
+#
+# Where tasks are read from and attempts written to is NOT in this file: the
+# shared config <repo>/config/config.yaml names both roots (local.data_root /
+# local.output_root; env MBABENCH_DATA_ROOT / MBABENCH_OUTPUT_ROOT win).
+# ============================================================================
+
+
+# ---- Agent identity --------------------------------------------------------
+# The cohort label — the ONLY model-selecting key a run config may set.
+# Everything behavioral (provider, ui_model_label, thinking_effort,
+# agent_folder, agent_model_type) is pinned by this label's entry in
+# agent_identities.yaml; setting any of those in a config refuses to run.
+agent_model_name:
+  value: null                # e.g. "claude_excel_fable_5_1"
+  required: false            # required at resolve time with a didactic error
+
+agent:
+  # DERIVED — leave null. The run's prompt version is the top-level
+  # `prompt_version`, which both selects the prompt text and is written to
+  # task_attempts.prompt_version; run.py copies it here before building the
+  # sink. A run config may set this key, in which case it must match the
+  # top-level value — a mismatch is refused.
+  prompt_version:
+    value: null
+    required: false
+
+
+# ---- Where attempts are staged on disk -------------------------------------
+paths:
+  # Each attempt gets a working directory (<ts>_<task>) under
+  # <scratch_dir>/attempts/ for the engine's solutions/, json_logs/ and
+  # general_logs/. The sink copies everything into <output_root> and the
+  # directory is deleted afterwards, so nothing under here is a lasting record.
+  scratch_dir:
+    value: "scratch/excel-agents"
+    required: true
+
+
+# ---- Task source (where tasks come from) -----------------------------------
+# "bundle" reads the downloaded benchmark: <data_root>/tasks/task_id=<N>/
+# task.json + starting_files/ (scripts/download_dataset.py). It is the only
+# source kind.
+source:
+  kind:
+    value: "bundle"
+    required: true
+
+  filters:
+    # Which tasks to run. [] = every task present under <data_root>/tasks/,
+    # ascending id. Slice further with --start/--end or run one with --task-id.
+    task_ids:
+      value: []
+      required: false
+    # Resume: skip tasks that already have a non-failed attempt from this
+    # agent at this prompt_version in
+    # <output_root>/attempts/<agent_model_name>/task_attempts.jsonl.
+    skip_already_attempted:
+      value: true
+      required: false
+
+
+# ---- Attempt sink (where results go) ---------------------------------------
+# "local" writes <output_root>/attempts/<agent_model_name>/task_id=<N>/<ts>/
+# (solution workbook first, then logs, then the prompts JSON) and appends one
+# row per attempt to <output_root>/attempts/<agent_model_name>/
+# task_attempts.jsonl — the file the judge reads. It is the only sink kind.
+sink:
+  kind:
+    value: "local"
+    required: true
+
+
+# ============================================================================
+# Engine inputs (everything from here down is assembled into the dict passed
+# to the engine subprocess, once per task, by infra/run.py).
+#
+# Rule: no placeholder defaults. Every default here is either a real working
+# value or `null` where null has an unambiguous meaning in the agent code.
+# The runner's preflight will exit(2) before touching the browser if anything
+# ends up empty/placeholder for the active provider.
+# ============================================================================
+
+
+# ---- Prompts ---------------------------------------------------------------
+# Selects the prompt text for this run from
+# tasks_configs/prompts/registry.yaml, AND is written to
+# task_attempts.prompt_version — one key, so the recorded label and the text
+# the agent receives cannot disagree. Registered versions:
+#
+#     0    000 pipeline smoke test   (no modeling — add a "TEST SHEET";
+#                                    throwaway rows, never grade)
+#   200    rubric-v9 3-step          (132-check rubric, 3 panel turns —
+#                                    byte-identical to the gui pipeline's
+#                                    prompts_v2 files)
+#   202    rubric-v9 3-step          + Questions-sheet answers (byte-identical
+#                                    to the gui pipeline's prompts_v3 files)
+#   203    rubric-v9 single-pass     + Questions-sheet answers (one panel
+#                                    turn — byte-identical to the gui
+#                                    pipeline's prompts/v2_2.txt)
+#   204    rubric-free 3-step        + Questions-sheet answers + House
+#                                    Standards (prompts_v4; attaches
+#                                    <repo>/house_standards/
+#                                    House_Standards_v1.md)
+#   205    rubric-free single-pass   + Questions-sheet answers + House
+#                                    Standards (prompts/v2_3.txt; same
+#                                    attachment)
+#
+# Default 205 = the single-pass set + the Questions-sheet answer convention
+# + the house standards, matching what the gui cohorts run so a gui-vs-excel
+# delta is attributable to the interface. A version's `attachments:` are
+# uploaded into the panel after the case files on every run (run.py refuses
+# to start if one is missing) and stamped into extra_configs.house_standards.
+# 200/202/203 remain registered for comparison runs. Must equal
+# agent.prompt_version if that is also set; run.py refuses a mismatch rather
+# than picking one.
+prompt_version:
+  value: 205
+  required: false
+
+
+# ---- OneDrive layout --------------------------------------------------------
+# The OneDrive folder segments the engine clicks through to reach a task:
+#     onedrive_base_path + task_name + "Task"
+# scripts/provision_onedrive.py creates exactly this layout from the
+# downloaded benchmark (<data_root>/tasks) and uploads each task's starting
+# workbook into its Task/ folder, so the engine and the provisioner can never
+# disagree about where a task lives.
+onedrive_base_path:
+  value: ["My files", "mbabench_tasks"]
+  required: true
+
+
+# ---- Browser (shared by both providers) ------------------------------------
+# One real Chrome instance holds the Microsoft 365 session; the engine
+# attaches over CDP. scripts/setup_chrome.sh launches it with these same
+# values (both read this config, so they cannot drift).
+browser:
+  cdp_port:
+    value: 9222
+    required: true
+  # null = auto-detect (Chrome Canary first, then regular Chrome).
+  chrome_binary:
+    value: null
+    required: false
+  # Chrome --user-data-dir holding the Microsoft 365 login. A relative path
+  # is resolved against the repo root (gitignored browser_profiles/ tree).
+  # Also the distinctive token used to scope any automation-Chrome cleanup —
+  # kills never touch a browser running a different profile.
+  profile_dir:
+    value: "browser_profiles/chrome-excel"
+    required: true
+  headless:
+    value: false
+    required: false
+  # Playwright default timeout for page actions, ms.
+  timeout:
+    value: 30000
+    required: false
+
+
+# ---- Claude add-in provider block ------------------------------------------
+# NOTE: no `model` key here — the model is pinned by agent_model_name via
+# agent_identities.yaml (ui_model_label). Setting one refuses to run.
+claude_excel_agent:
+  max_sec_per_task:
+    value: 7200                # 2h; the engine's own wall-clock guard
+    required: false
+  max_wait_per_prompt_seconds:
+    value: 7200
+    required: false
+  check_interval_seconds:
+    value: 2
+    required: false
+  panel_boot_timeout_seconds:
+    value: 30
+    required: false
+  logging:
+    level:
+      value: "INFO"
+      required: false
+    save_to_file:
+      value: true
+      required: false
+
+
+# ---- ChatGPT add-in provider block -----------------------------------------
+# NOTE: no `ui_model_label` / `thinking_effort` keys here — both are pinned
+# by agent_model_name via agent_identities.yaml (the add-in's combined
+# "Model and thinking effort" menu). Setting either refuses to run.
+chatgpt_excel_agent:
+  # true = flip the add-in's "Apply edits automatically" switch on during
+  # setup (recommended for unattended runs; verified after clicking).
+  apply_edits_automatically:
+    value: true
+    required: false
+  max_sec_per_task:
+    value: 7200
+    required: false
+  max_wait_per_prompt_seconds:
+    value: 7200
+    required: false
+  check_interval_seconds:
+    value: 2
+    required: false
+  panel_boot_timeout_seconds:
+    value: 30
+    required: false
+  logging:
+    level:
+      value: "INFO"
+      required: false
+    save_to_file:
+      value: true
+      required: false
+
+
+# ---- Runner behavior --------------------------------------------------------
+runner:
+  # Infra (pipeline) failures — nav, panel, Excel UI, download — are retried
+  # in place without recording anything: no attempt row, no trial burned.
+  # This is the total number of tries per task before the runner gives up on
+  # it for this invocation (the task stays eligible for future runs).
+  max_infra_tries:
+    value: 3
+    required: false
+  # Seconds between infra retries.
+  sleep_between_retries:
+    value: 20
+    required: false

@@ -1,0 +1,124 @@
+# Prompt-version registry — maps `prompt_version` to the prompt file(s) sent.
+#
+# WHY THIS EXISTS
+# The version is the single key that selects the text, so the number written
+# to task_attempts.prompt_version and the prompt the agent received are the
+# same decision and cannot disagree.
+#
+# HOW IT IS USED
+# infra/configs/prompt_registry.py reads this file; infra/run.py resolves the
+# run's `prompt_version` through it, loads the files' TEXT, and embeds it in
+# the engine config (each file = one panel turn, in order). The same text is
+# snapshotted into the attempt's prompts JSON stored with the attempt.
+#
+# ADDING A VERSION
+# Add an entry; never edit an existing one. A version that has been used for
+# a real run is immutable — rows in task_attempts already point at it.
+# New text = new number.
+#
+# NUMBERING (shared with gui-agents so cross-pipeline rows are comparable)
+#   0        infrastructure smoke test — not a benchmark prompt. Rows it
+#            produces are throwaway.
+#   200      the rubric-v9 (132-check) 3-step prompt set, BYTE-IDENTICAL to
+#            gui-agents/tasks_configs/prompts_v2/. Identical prompts + identical
+#            rubric mean a gui-vs-excel delta is attributable to the
+#            interface, not the text.
+
+versions:
+
+  0:
+    label: "000 pipeline smoke test"
+    description: >
+      NOT a benchmark prompt. One turn asking the agent to return the
+      workbook unchanged plus a single extra sheet named "TEST SHEET"
+      holding a large bold "TEST" in A1. Exists to exercise the whole
+      path — navigation, panel, turn, download, validation, attempt record —
+      in minutes, with a solution checkable by eye. Never grade a run
+      recorded under this version.
+    files:
+      - "tasks_configs/prompts/v000_test.txt"
+
+  200:
+    label: "rubric-v9 3-step (shared with gui)"
+    description: >
+      Three prompts, one panel turn each: analyze & plan (Summary sheet) ->
+      build (embeds the full 132-check rubric) -> QA. Byte-identical copies
+      of gui-agents/tasks_configs/prompts_v2/, under the same number
+      the gui pipeline uses, so the web-chat and in-Excel cohorts ran the
+      exact same text.
+    files:
+      - "tasks_configs/prompts_v2/step1_analyze.txt"
+      - "tasks_configs/prompts_v2/step2_build.txt"
+      - "tasks_configs/prompts_v2/step3_qa.txt"
+
+  202:
+    label: "rubric-v9 3-step + Questions-sheet answers (shared with gui)"
+    description: >
+      Version 200 with one addition: the starting workbook's 'Questions'
+      sheet (questions in column A from A2, reserved answer cells in the
+      column headed 'Answers' — B in most tasks, C in a few, from row 2
+      down — units in the 'Unit' column, answer-format instructions in
+      the header row) must be preserved — same name, same rows — and answered
+      with live formulas referencing the model. Byte-identical copies of
+      gui-agents/tasks_configs/prompts_v3/, under the same number
+      the gui pipeline uses; the 132-check rubric body is unchanged from
+      200.
+    files:
+      - "tasks_configs/prompts_v3/step1_analyze.txt"
+      - "tasks_configs/prompts_v3/step2_build.txt"
+      - "tasks_configs/prompts_v3/step3_qa.txt"
+
+  203:
+    label: "rubric-v9 single-pass + Questions-sheet answers (shared with gui)"
+    description: >
+      The 202 content folded into ONE panel turn, with the same
+      Questions-sheet convention (live-formula answers in the 'Answers'
+      column from row 2 down; sheet preserved under its exact name) and the matching QA item
+      8. Byte-identical copy of gui-agents/tasks_configs/prompts/
+      v2_2.txt under the same number the gui pipeline uses, so the
+      web-chat and in-Excel cohorts run the exact same text; the 132-check
+      rubric body is unchanged from 200/202. The repo default.
+    files:
+      - "tasks_configs/prompts/v2_2.txt"
+
+  204:
+    label: "House Standards 3-step (rubric-free) + Questions-sheet answers"
+    description: >
+      The House Standards prompt set, three turns. Generated from the frozen
+      202 sources (prompts_v3/) by tools/build_house_standards_prompts.py:
+      every rubric passage is REMOVED (the graded-against paragraph and
+      category weights, the professional-services conventions summary, the
+      132-check rubric block, and the rubric-derived QA audit list, replaced
+      by a neutral verify-and-deliver step) and the house standards are
+      added instead - a read-it-now sentence in step 1, a HOUSE STANDARDS
+      block in step 2, and a "follows House_Standards_v1.md" check in step 3.
+      The file itself is declared under `attachments` and is uploaded with
+      the case files on every run of this version - the version selects the
+      text AND the attachment. Same design as the coding pipeline's
+      rubric-scrubbed v10/v11 templates (maintainer, 2026-09-10). The
+      Questions-sheet answer mechanics are unchanged from 202.
+      (Cut 2026-09-10 as "202 + house standards, rubric untouched" and
+      redefined the same day before any 204 run was recorded.)
+    files:
+      - "tasks_configs/prompts_v4/step1_analyze.txt"
+      - "tasks_configs/prompts_v4/step2_build.txt"
+      - "tasks_configs/prompts_v4/step3_qa.txt"
+    attachments:
+      - "../house_standards/House_Standards_v1.md"
+
+  205:
+    label: "House Standards single-pass (rubric-free) + Questions-sheet answers"
+    description: >
+      The House Standards prompt, one turn: the same removals and additions
+      as 204 applied to the frozen 203 text (prompts/v2_2.txt) by
+      tools/build_house_standards_prompts.py - no rubric material at all,
+      a HOUSE STANDARDS block after the Questions item, and a neutral
+      VERIFY AND DELIVER step in place of the rubric-derived QA list. The
+      attachment is the same House_Standards_v1.md. The repo default.
+      (Cut 2026-09-10 as "203 + house standards, rubric untouched";
+      redefined the same day - the two attempts recorded under that text,
+      1239 and 1240, are deprecated.)
+    files:
+      - "tasks_configs/prompts/v2_3.txt"
+    attachments:
+      - "../house_standards/House_Standards_v1.md"

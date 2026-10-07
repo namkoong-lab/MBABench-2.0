@@ -1,0 +1,368 @@
+# Agent identity registry — THE place that defines what a cohort name means.
+#
+# A batch config names its cohort with ONE key, agent_model_name (the value
+# written to task_attempts.agent_model_name), and nothing else about the
+# model. The entry here for that label supplies every setting that changes
+# what the agent does; the runner copies them into the config and refuses to
+# start if the config carries any of them itself (even with the same value —
+# one source of truth):
+#
+#   model                   provider model id (Anthropic/OpenAI direct id)
+#   reasoning_effort        null for models that don't take it
+#   thinking_budget_tokens  null for models that don't take it; otherwise an
+#                           int >= 1024 and < max_completion_tokens
+#   max_completion_tokens   output ceiling the executor sends
+#   base_url                provider routing keys off base_url, not the model
+#                           name, so pinning it is what stops a Claude model
+#                           from silently taking the OpenAI code path
+#   fresh_context_mode      true = re-read solution.xlsx every iteration
+#                           instead of accumulating tool-call history
+#   enhanced_excel_context  true = grid-format sheet rendering in the prompt
+#   recent_history_count    recent tool calls replayed in fresh context mode
+#
+# An unknown label refuses to run and prints a ready-to-paste stanza. All
+# eight settings are written to every attempt row's extra_configs
+# (task_attempts.jsonl),
+# so a row records the exact settings it ran under and can be audited later
+# without trusting this file.
+#
+# Existing entries should normally not change. agent_model_name is what
+# identifies a group of runs: skip-if-attempted, the judge,
+# and the paper tables all group rows by it and assume every row under a
+# label ran with the same settings. Edit an entry's other fields only with
+# the explicit intent that the new runs be grouped with the existing ones
+# under that label (extra_configs still records what each row actually ran
+# with, v2 only). Otherwise add a new entry with a new label.
+#
+# Rules, enforced at load: every agent_model_name unique; every
+# (model, reasoning_effort, thinking_budget_tokens, max_completion_tokens)
+# combination unique; every field above present on every entry.
+
+- agent_model_name: openpyxl_anthropic/claude-fable-5-max
+  model: claude-fable-5
+  reasoning_effort: max
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.anthropic.com
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+- agent_model_name: openpyxl_anthropic/claude-sonnet-5-xhigh
+  model: claude-sonnet-5
+  reasoning_effort: xhigh
+  thinking_budget_tokens: null
+  max_completion_tokens: 64000
+  base_url: https://api.anthropic.com
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+- agent_model_name: openpyxl_anthropic/claude-haiku-4-5-think16k
+  model: claude-haiku-4-5
+  reasoning_effort: null
+  thinking_budget_tokens: 16000
+  max_completion_tokens: 32000
+  base_url: https://api.anthropic.com
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+# The two OpenAI entries were run from configs that never set
+# recent_history_count, so they took the executor default of 5.
+- agent_model_name: openpyxl_openai/gpt-5.2-none
+  model: gpt-5.2
+  reasoning_effort: none
+  thinking_budget_tokens: null
+  max_completion_tokens: 64000
+  base_url: https://api.openai.com/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 5
+
+- agent_model_name: openpyxl_openai/gpt-4o-mini
+  model: gpt-4o-mini
+  reasoning_effort: null
+  thinking_budget_tokens: null
+  max_completion_tokens: 16000
+  base_url: https://api.openai.com/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 5
+
+# GPT-5.6 Sol at the top reasoning tier — the OpenAI-flagship counterpart to
+# openpyxl_anthropic/claude-fable-5-max. Wire id + effort ladder verified
+# against the OpenAI model page 2026-08-26: gpt-5.6-sol (Sol = flagship of
+# the 5.6 Sol/Terra/Luna family) takes reasoning_effort
+# none/low/medium/high/xhigh/max; "max" is the top tier, and the Chat
+# Completions endpoint (what the executor calls) supports it. The separate
+# Responses-API "reasoning mode: pro" execution mode is NOT reachable from
+# this pipeline and is deliberately not part of this identity.
+# max_completion_tokens 128000 = the model's documented output ceiling,
+# matching the fable-5-max entry; recent_history_count 3 also matches
+# fable-5-max (the older OpenAI entries' 5 was an executor-default accident,
+# per the note above them) so the two flagship-max cohorts run under
+# identical harness settings.
+- agent_model_name: openpyxl_openai/gpt-5.6-sol-max
+  model: gpt-5.6-sol
+  reasoning_effort: max
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.openai.com/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+# RETIRED, never viable — do not use. Chat Completions rejects
+# reasoning_effort "max" for gpt-5.6-sol (400 unsupported_value, live-tested
+# 2026-08-26: supported values none/low/medium/high/xhigh; "max" exists only
+# on the Responses API, which this executor does not call). The entry above
+# stays per append-only rules: its 30 recorded rows (attempt ids 428-457,
+# 2026-08-26, all agent_failed "needs_clarification" from that 400) are
+# deprecated in the DB. The replacement below is the real top tier for this
+# pipeline; it is the cohort to grade.
+- agent_model_name: openpyxl_openai/gpt-5.6-sol-xhigh
+  model: gpt-5.6-sol
+  reasoning_effort: xhigh
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.openai.com/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+# ---------------------------------------------------------------------------
+# 2026-09-10: the 101-task MBABench rerun cohorts (prompt v15 / pv 1509).
+# Live-probed 2026-09-10 against both providers before registering:
+#
+#   claude-fable-5-1  listed by /v1/models (128000 output ceiling, 1M input);
+#                     output_config.effort accepts low/medium/high/xhigh/max
+#                     ("max" accepted on a live request; "ultra" 400).
+#                     Successor to claude-fable-5 at the same tier — the
+#                     counterpart of the GUI/Excel Fable 5.1 cohorts.
+#   gpt-6-astra       listed by /v1/models; 128000 completion ceiling
+#                     (200000 400s). Chat Completions — what this executor
+#                     calls — accepts reasoning_effort low/medium/high/xhigh
+#                     and REJECTS "max" (400 unsupported_value, same as the
+#                     gpt-5.6-sol lesson above); "max" exists only on the
+#                     Responses API. xhigh is therefore the top tier reachable
+#                     from this pipeline. Counterpart of the GUI
+#                     chatgpt_gpt_6_astra_work_ultra cohort.
+#
+# Harness settings match the two flagship entries above (128000 cap,
+# fresh context, recent_history_count 3) so the four flagship cohorts differ
+# only in model + effort.
+- agent_model_name: openpyxl_anthropic/claude-fable-5-1-max
+  model: claude-fable-5-1
+  reasoning_effort: max
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.anthropic.com
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+- agent_model_name: openpyxl_openai/gpt-6-astra-xhigh
+  model: gpt-6-astra
+  reasoning_effort: xhigh
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.openai.com/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+# ---------------------------------------------------------------------------
+# 2026-09-20: first cohort routed through the TensorBlock Forge gateway
+# (bills Forge credits only; key = keys.forge_api_key). The label says
+# "tensorblock" because that is the API the rows ran against - a direct xAI
+# cohort, if one is ever run, gets its own label.
+#
+#   grok-4.6   listed by Forge's /v1/models as tensorblock/grok-4.6
+#              (2026-09-20). xAI docs the same day: 500,000-token context, no
+#              output limit, reasoning always on (cannot be disabled),
+#              reasoning effort low/medium/high/xhigh with high the default;
+#              xhigh exists from grok-4.6 on. xhigh is therefore the top
+#              tier - the counterpart of fable-5-1-max / gpt-6-astra-xhigh.
+#              Live-probed through Forge 2026-09-20 (12 calls): the gateway
+#              forwards the top-level reasoning_effort this executor sends
+#              (an invalid value 400s at the provider; low vs xhigh = 1.5k vs
+#              9-13k reasoning tokens on one puzzle; xAI's own REST examples
+#              nest it as reasoning.effort - same result) and accepts the
+#              128000 cap. Thinking streams as delta.reasoning_content and is
+#              reported OUTSIDE completion_tokens; the executor handles both.
+#              One call in twelve took a slower upstream route (no streamed
+#              thinking, ~11 tok/s against ~77).
+#
+# Harness settings match the flagship entries above (128000 cap, fresh
+# context, recent_history_count 3).
+- agent_model_name: openpyxl_tensorblock/grok-4.6-xhigh
+  model: tensorblock/grok-4.6
+  reasoning_effort: xhigh
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.forge.tensorblock.co/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+#   Kimi-K3    listed by Forge's /v1/models as tensorblock/Kimi-K3 (that
+#              spelling; 2026-09-20). Forge serves it from Fireworks - the
+#              response echoes "FW-Kimi-K3". Moonshot docs the same day:
+#              thinking always on, reasoning_effort low/high/max with max the
+#              default, so max is the top tier - the counterpart of
+#              fable-5-1-max. Live-probed through Forge 2026-09-20: top-level
+#              reasoning_effort is read (an invalid value 400s at the
+#              provider; low/high/max accepted), the 128000 cap is accepted,
+#              thinking streams as delta.reasoning_content and IS counted
+#              inside completion_tokens (the OpenAI convention).
+- agent_model_name: openpyxl_tensorblock/kimi-k3-max
+  model: tensorblock/Kimi-K3
+  reasoning_effort: max
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.forge.tensorblock.co/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+#   gemini-3.8-flash  listed by Forge's /v1/models as
+#              tensorblock/gemini-3.8-flash (2026-09-21); upstream answers as
+#              "models/gemini-3.8-flash" (Google's Gemini API). Google docs
+#              the same day: thinking levels low / medium / high, medium the
+#              default, high the top ("maximizes reasoning"); minimal is
+#              rejected; 1M-token context, 64k max output. high is therefore
+#              the top tier - the counterpart of fable-5-1-max /
+#              gpt-6-astra-xhigh. Live-probed through Forge 2026-09-21 (43
+#              calls, ~$0.82) in this executor's request shape: minimal 400s
+#              at Google, so the top-level reasoning_effort reaches it - but
+#              Forge silently accepts values Google does not document (bogus,
+#              xhigh, max), so a typo here would not be caught. Every
+#              max_completion_tokens tried was accepted, up to 1,000,000; no
+#              prompt made the model write past ~44k tokens (it always stopped
+#              on its own), so 128000 is kept, as for the other cohorts: the
+#              model's own ceiling (65,536 per Google) is then the only limit.
+#              Thinking is not streamed: Forge sends keep-alive chunks
+#              (extra_content only) while it thinks, then a thought summary
+#              (delta.reasoning_content) with the answer; thinking is reported
+#              OUTSIDE completion_tokens (total - prompt), which the executor
+#              counts. 250-400 tokens/s, longest silence 42 s, no hangs.
+#              THE ONE MODEL ON NATIVE FUNCTION CALLS (2026-09-22): it answers
+#              with function calls, not the JSON reply, so the executor
+#              declares the Excel tools (+ complete_task) for exactly this
+#              model id and it runs the v16 system prompt VARIANT
+#              system_prompt_v16_gemini-3.8-flash.txt (function-call
+#              contract; prompt_versions.MODEL_SYSTEM_PROMPT_VARIANTS). Rows
+#              still record prompt_version 1609; extra_configs carries
+#              response_contract=native_tools and system_prompt_file. See
+#              models_config.GEMINI_TOOL_CALL_MODELS for the probes.
+- agent_model_name: openpyxl_tensorblock/gemini-3.8-flash-high
+  model: tensorblock/gemini-3.8-flash
+  reasoning_effort: high
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.forge.tensorblock.co/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+#   qwen3.8-max  listed by Forge's /v1/models as tensorblock/qwen3.8-max
+#              (2026-09-21), served by Fireworks. Live-probed through Forge
+#              2026-09-21 in this executor's request shape (16 calls, ~$0.17,
+#              billed exactly $2 / $6 per M, cached input $0.25 per M):
+#              reasoning_effort maps to thinking budgets low / medium / xhigh
+#              = 4,096 / 16,384 / 262,144; xhigh is both the default and the
+#              top tier (high and max are aliases of it; bogus and minimal are
+#              400s), so xhigh is pinned - the counterpart of
+#              grok-4.6-xhigh / kimi-k3-max. Thinking streams as
+#              delta.reasoning_content and is billed inside completion_tokens.
+#              max_completion_tokens 128000 accepted (like the other Forge
+#              identities; not validated upstream, real output far below it).
+#              Dropped for Gemini on 2026-09-21 pm, re-added on the maintainer's order
+#              the same evening as the third Forge cohort.
+- agent_model_name: openpyxl_tensorblock/qwen3.8-max-xhigh
+  model: tensorblock/qwen3.8-max
+  reasoning_effort: xhigh
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.forge.tensorblock.co/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+#   gpt-6-astra  listed by Forge's /v1/models as tensorblock/gpt-6-astra
+#              (2026-09-22). Added so the 12 tasks of the direct
+#              openpyxl_openai/gpt-6-astra-xhigh cohort that died on the
+#              2026-09-22 OpenAI credit outage ("no credits remaining") can be
+#              run on Forge credits (maintainer 2026-09-22: "we have to use
+#              tensorblock"); same model and effort as that entry, only the
+#              route differs. Probed through Forge 2026-09-22 (sub-dollar):
+#              top-level reasoning_effort is forwarded (bogus -> provider 400;
+#              xhigh answers as gpt-6-astra-2026-09-03, OpenAI's usage shape,
+#              reasoning counted inside completion_tokens); the stream carries
+#              Azure content_filter_results, i.e. Forge serves it from Azure
+#              OpenAI; no byte - not even the headers - arrives until the
+#              thinking is done, so a long think looks like a hang: this model
+#              gets a 900 s Forge stall limit instead of 600 (maintainer 2026-09-22;
+#              FORGE_SILENT_THINKING_STALL_SECONDS in models_config.py).
+- agent_model_name: openpyxl_tensorblock/gpt-6-astra-xhigh
+  model: tensorblock/gpt-6-astra
+  reasoning_effort: xhigh
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.forge.tensorblock.co/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+#   claude-opus-5  listed by Forge's /v1/models as tensorblock/claude-opus-5;
+#              answers as us.anthropic.claude-opus-5 (Forge serves it from AWS
+#              Bedrock). Added 2026-09-23 so an Opus 5 cohort runs on Forge
+#              credits (maintainer: "use opus 5 instead of opus 5.5"; the Opus 5.5 run
+#              was cancelled the same day before writing any row). Anthropic's
+#              docs: thinking on by default (adaptive), effort low / medium /
+#              high / xhigh / max with max the top - the counterpart of
+#              openpyxl_anthropic/claude-fable-5-1-max; 1M context, 128K output;
+#              $5 / $25 per M. Route: Forge's Anthropic-native endpoint returns
+#              405 ("The Claude Code API is no longer supported by Forge"), so
+#              the executor reaches it through OpenAI-style chat completions
+#              (top-level reasoning_effort), not the output_config.effort request
+#              the direct Anthropic cohorts send. Probed through Forge 2026-09-23
+#              in this executor's request shape (3 calls, $0.32): reasoning_effort
+#              is forwarded (one finance puzzle: max 11,587 completion tokens /
+#              117 s, low 1,060 / 16 s, same answer; bogus "ultra" -> provider
+#              400); thinking is counted inside completion_tokens and billed at
+#              exactly $5 / $25; thinking is NOT streamed - no byte arrives until
+#              it is done - so this model gets a 30-minute Forge stall limit
+#              (FORGE_SILENT_THINKING_STALL_SECONDS in models_config.py).
+- agent_model_name: openpyxl_tensorblock/claude-opus-5-max
+  model: tensorblock/claude-opus-5
+  reasoning_effort: max
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.forge.tensorblock.co/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+
+#   glm-5.3    listed by Forge's /v1/models as tensorblock/glm-5.3; served by
+#              Fireworks (usage log: FW-GLM-5.3). Row 3634 (task 8, 2026-09-23)
+#              ran under this label from another machine's copy of the stanza;
+#              this entry repeats the settings that row recorded
+#              (extra_configs), so later rows match it. Z.AI docs: thinking
+#              always on, reasoning_effort low / high / max with max the default
+#              and the top - the counterpart of kimi-k3-max. Probed through
+#              Forge 2026-09-24 in this executor's request shape (cents): low /
+#              medium / high / xhigh / max accepted, none / minimal / unknown
+#              values refused 400; thinking streams as delta.reasoning_content,
+#              counted inside completion_tokens (reasoning_tokens reported);
+#              TensorBlock accepted a 795,002-token prompt and refused ~894k.
+- agent_model_name: openpyxl_tensorblock/glm-5.3-max
+  model: tensorblock/glm-5.3
+  reasoning_effort: max
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.forge.tensorblock.co/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3

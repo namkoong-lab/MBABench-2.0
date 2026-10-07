@@ -1,0 +1,386 @@
+# ============================================================================
+# gui-agents infra — default config schema.
+#
+# This file defines EVERY configurable knob and its default.
+# To override anything, create a sibling `configs.yaml` (gitignored) for
+# machine-specific values (Chrome port, profile) and pass a run config
+# (--run-config) for the experiment (provider, model, prompt_version, tasks).
+#
+# Merge order (later wins):
+#   1. configs.default.yaml       (this file)
+#   2. configs.yaml               (user global overrides)
+#   3. --run-config <file>        (the per-experiment overlay)
+#
+# Leaf form: each concrete setting is a dict with two keys:
+#     value:    the default (or "" / [] / null if none)
+#     required: true  -> must be truthy after merge, else ConfigError
+#               false -> may be empty; callers decide when it's needed
+#
+# Override form: in configs.yaml and run configs you may use EITHER the full
+# `{value: ...}` form or a raw scalar/list:
+#     provider:
+#       kind: "chatgpt"           # raw — shorthand
+#       kind: {value: "chatgpt"}  # full form — same effect
+#
+# Where tasks are read from and attempts written to is NOT in this file: the
+# shared config <repo>/config/config.yaml names both roots (local.data_root /
+# local.output_root; env MBABENCH_DATA_ROOT / MBABENCH_OUTPUT_ROOT win).
+# ============================================================================
+
+
+# ---- Which provider / agent is running -------------------------------------
+provider:
+  kind:
+    value: "claude"          # "claude" | "chatgpt"
+    required: true
+
+
+# ---- Agent identity --------------------------------------------------------
+# `model_name`, `agent_folder`, and `agent_model_type` are derived from the
+# provider block below by infra/configs/agent_identity.py, so the recorded
+# label cannot disagree with what the run did. `prompt_version` stays
+# operator-controlled — it is independent of any behavior field.
+agent:
+  # DERIVED — leave null. The run's prompt version is the top-level
+  # `prompt_version`, which both selects the prompt files and is written to
+  # task_attempts.prompt_version; run.py copies it here before building the
+  # sink. A run config may set this key, in which case it must match the
+  # top-level value — a mismatch is refused, since it would record a row
+  # under a version the agent was never sent.
+  prompt_version:
+    value: null
+    required: false
+
+
+# ---- Where attempts are staged on disk -------------------------------------
+paths:
+  # Each attempt gets a working directory (<ts>_<task>_p<pid>) under
+  # <scratch_dir>/attempts/ for the engine's solutions/, json_logs/ and
+  # logs/. The sink copies everything into <output_root> and the directory
+  # is deleted afterwards, so nothing under here is a lasting record.
+  scratch_dir:
+    value: "scratch/gui-agents"
+    required: true
+
+
+# ---- Task source (where tasks come from) -----------------------------------
+# "bundle" reads the downloaded benchmark: <data_root>/tasks/task_id=<N>/
+# task.json + starting_files/ (scripts/download_dataset.py). It is the only
+# source kind.
+source:
+  kind:
+    value: "bundle"
+    required: true
+
+  filters:
+    # Which tasks to run. [] = every task present under <data_root>/tasks/,
+    # ascending id. Slice further with --start/--end or run one with --task-id.
+    task_ids:
+      value: []
+      required: false
+    # Resume: skip tasks that already have a non-failed attempt from this
+    # agent at this prompt_version in
+    # <output_root>/attempts/<agent_model_name>/task_attempts.jsonl.
+    skip_already_attempted:
+      value: true
+      required: false
+
+
+# ---- Attempt sink (where results go) ---------------------------------------
+# "local" writes <output_root>/attempts/<agent_model_name>/task_id=<N>/<ts>/
+# (solution workbook first, then logs, then the prompts JSON) and appends one
+# row per attempt to <output_root>/attempts/<agent_model_name>/
+# task_attempts.jsonl — the file the judge reads. It is the only sink kind.
+sink:
+  kind:
+    value: "local"
+    required: true
+
+
+# ============================================================================
+# Engine inputs (everything from here down is assembled into the dict passed
+# to the engine subprocess, once per task, by infra/run.py).
+#
+# `build_engine_config(cfg, spec)` selects the active provider block
+# (claude_web / chatgpt_web) and assembles:
+#     {agent_type, prompts_file, prompt_version, task_name, task_id,
+#      upload_files, prompt_attachments, <provider>_web: {...}}
+#
+# Rule: no placeholder defaults. Every default here is either a real working
+# value or `null` where null has an unambiguous meaning in the agent code.
+# The runner's preflight will exit(2) before touching the browser if anything
+# ends up empty/placeholder for the active provider.
+# ============================================================================
+
+
+# ---- Shared (both providers) -----------------------------------------------
+# Selects the prompt file(s) for this run from
+# tasks_configs/prompts/registry.yaml, AND is written to
+# task_attempts.prompt_version — one key, so the recorded label and the text
+# the agent receives cannot disagree. Registered versions:
+#
+#     0    000 pipeline smoke test   (no modeling — copy workbook + add a
+#                                    "TEST SHEET"; throwaway rows, never grade)
+#     1    000 + House Standards attachment (smoke test of the attachment path)
+#   200    rubric-v9 3-step          (132-check rubric, 3 turns)
+#   201    rubric-v9 single-pass     (132-check rubric, 1 turn)
+#   202    rubric-v9 3-step          + Questions-sheet answers (3 turns)
+#   203    rubric-v9 single-pass     + Questions-sheet answers (1 turn)
+#   204    202 + House Standards     (3 turns; attaches House_Standards_v1.md)
+#   205    203 + House Standards     (1 turn;  attaches House_Standards_v1.md)
+#
+# Default 205 = the single-pass set + Questions-sheet answers + the house
+# standards (tasks_configs/prompts/v2_3.txt). A version may declare
+# `attachments` in the registry; those files are uploaded after each task's
+# starting files on every run of that version, and their text is recorded in
+# the attempt's prompts JSON. The version selects them — no run config names
+# the file. Must equal agent.prompt_version if that is also set; run.py
+# refuses a mismatch rather than picking one.
+prompt_version:
+  value: 205
+  required: false
+
+
+# ---- Claude provider block (passed as engine_config["claude_web"]) ---------
+claude_web:
+  # null = use the default Claude.ai chat (no project scope). Paste a real
+  # project_id (from https://claude.ai/project/{id}) to pin runs to a project.
+  project_id:
+    value: null
+    required: false
+  # Surface mode: "chat" | "cowork". Selection persists across sessions; the
+  # agent asserts it every task. Part of the identity label.
+  mode:
+    value: "chat"
+    required: false
+  # Cowork action approvals: manual | auto | skip (null = auto). "manual"
+  # pauses for every action and stalls unattended runs. Cowork mode only.
+  cowork_approval:
+    value: "auto"
+    required: false
+  # Model config value → claude.ai dropdown label (see MODEL_LABELS in
+  # claude_web_agent.py). null crashes the agent at model-selector time —
+  # DO NOT leave null; benchmark runs must pin it for the identity label.
+  model:
+    value: "opus_4_8"          # opus_5_5 | fable_5_1 | opus_5 | fable_5 |
+                               # sonnet_5 | haiku_4_5 | opus_4_8 | opus_4_6 |
+                               # sonnet_4_6
+    required: false
+  # Reasoning effort via the model dropdown's Effort submenu
+  # (low | medium | high | xhigh | max; xhigh renders as "Extra" in the UI).
+  # Haiku has no effort control and ignores this. null = keep the session's
+  # current level. Part of the identity label (haiku's label omits it).
+  effort:
+    value: "max"
+    required: false
+  # Desired state of the composer's thinking switch. Applied only for models
+  # that expose it (opus family); a successful no-op for models that don't.
+  enable_extended_thinking:
+    value: true
+    required: false
+  # Web Search capability in the composer's tools menu. Off for benchmark
+  # runs — the tasks are self-contained and a search changes what the model
+  # sees between attempts.
+  enable_web_search:
+    value: false
+    required: false
+  max_sec_per_task:
+    value: 18000               # 5h
+    required: false
+  check_interval_seconds:
+    value: 2
+    required: false
+  max_wait_per_prompt_seconds:
+    value: 18000
+    required: false
+
+  retry:
+    max_agent_attempts:
+      value: 3
+      required: false
+    max_total_attempts:
+      value: 10
+      required: false
+    max_sec_per_task:
+      value: 18000
+      required: false
+    max_sec_per_attempt:
+      value: 18000
+      required: false
+    sleep_between_retries:
+      value: 5
+      required: false
+
+  # STANDALONE ONLY. `python -m infra.run` gives the engine one working
+  # directory per attempt under paths.scratch_dir and deletes it once the
+  # sink has the files, so these apply only to a direct
+  # `claude_web_engine.py --config` invocation.
+  output:
+    base_dir:
+      value: "."
+      required: false
+    folder_prefix:
+      value: "claudeGUI"
+      required: false
+
+  browser:
+    type:
+      value: "chrome"
+      required: false
+    headless:
+      value: false
+      required: false
+    timeout:
+      value: 30000
+      required: false
+    cdp_port:
+      value: 9222
+      required: false
+    # Chrome --user-data-dir, holding the claude.ai login. A relative path is
+    # resolved against the repo root, so this lives under the (gitignored)
+    # browser_profiles/ tree. Must match the --user-data-dir flag used when
+    # launching Chrome manually (see the root README).
+    profile_dir:
+      value: "browser_profiles/chrome-claude"
+      required: false
+
+  logging:
+    level:
+      value: "INFO"
+      required: false
+    save_to_file:
+      value: true
+      required: false
+    # STANDALONE ONLY — see `output` above. Under infra.run the runtime log
+    # and the chat transcript go to the attempt's own directory.
+    log_directory:
+      value: "claude_web_logs"
+      required: false
+
+  runtime:
+    no_hold:
+      value: true
+      required: false
+
+
+# ---- ChatGPT provider block (passed as engine_config["chatgpt_web"]) -------
+chatgpt_web:
+  # null = start at the chatgpt.com homepage (no project scope; chats land
+  # in the account's main history — the agent logs a warning). To pin runs
+  # to a project, copy the id from
+  # https://chatgpt.com/g/g-p-{project_id}-{slug}/project.
+  project_id:
+    value: null
+    required: false
+  project_slug:
+    value: null
+    required: false
+  # Model (the nested submenu of the composer pill). null is valid (uses
+  # the current session default).
+  # chat-mode values: gpt_6 | gpt_5_6_sol | gpt_5_5
+  # work-mode values: gpt_6_astra | gpt_5_6_sol
+  # One-axis values (instant | thinking | pro) name an intelligence level
+  # rather than a model; the agent routes them to `intelligence`. They stay
+  # valid so the cohorts already recorded under those labels can be
+  # reproduced — a new run should name a model and set `intelligence`.
+  model:
+    value: "gpt_5_6_sol"
+    required: false
+  # Surface mode: "chat" | "work". Selection persists across sessions; the
+  # agent asserts it every task. Part of the identity label (it also picks
+  # which reasoning axes apply: intelligence vs effort+speed).
+  mode:
+    value: "chat"
+    required: false
+  # WORK-mode picker (pill menu > Advanced): effort + speed. Must be null
+  # in chat mode. Part of the work-mode identity label.
+  effort:
+    value: null                # light | medium | high | xhigh | max | ultra | null
+    required: false
+  speed:
+    value: null                # standard | fast | null (null = standard)
+    required: false
+  # CHAT-mode intelligence axis (the pill's top-level radios). Must be
+  # null when mode == "work". Part of the chat-mode identity label.
+  intelligence:
+    value: null                # instant | medium | high | xhigh | pro | null
+    required: false
+  max_sec_per_task:
+    value: 18000               # 5h
+    required: false
+  check_interval_seconds:
+    value: 3
+    required: false
+  max_wait_per_prompt_seconds:
+    value: 18000               # 5h
+    required: false
+
+  retry:
+    max_agent_attempts:
+      value: 3
+      required: false
+    max_total_attempts:
+      value: 10
+      required: false
+    # Per-attempt ceiling. Matches max_sec_per_task (the engine guard takes
+    # min() of the two) so a legitimately slow Pro attempt (90-120 min is
+    # normal) runs to natural completion instead of being killed and
+    # restarted from scratch in a new chat.
+    max_sec_per_attempt:
+      value: 18000
+      required: false
+    sleep_between_retries:
+      value: 5
+      required: false
+
+  # STANDALONE ONLY. `python -m infra.run` gives the engine one working
+  # directory per attempt under paths.scratch_dir and deletes it once the
+  # sink has the files, so these apply only to a direct
+  # `claude_web_engine.py --config` invocation.
+  output:
+    folder_prefix:
+      value: "chatgptGUI"
+      required: false
+
+  browser:
+    type:
+      value: "chrome"
+      required: false
+    headless:
+      value: false
+      required: false
+    timeout:
+      value: 30000
+      required: false
+    cdp_port:
+      value: 9222
+      required: false
+    # Chrome --user-data-dir, holding the chatgpt.com login. A relative path is
+    # resolved against the repo root, so this lives under the (gitignored)
+    # browser_profiles/ tree rather than in $HOME. Must match the
+    # --user-data-dir flag used when launching Chrome manually (see the root
+    # README).
+    profile_dir:
+      value: "browser_profiles/chrome-chatgpt"
+      required: false
+
+  # `session.agent_name` is not a config key: run.py sets it from the resolved
+  # agent identity, so the solution filename names the model that produced it.
+
+  logging:
+    level:
+      value: "INFO"
+      required: false
+    save_to_file:
+      value: true
+      required: false
+    # STANDALONE ONLY — see `output` above. Under infra.run the runtime log
+    # and the chat transcript go to the attempt's own directory.
+    log_directory:
+      value: "chatgpt_web_logs"
+      required: false
+
+  runtime:
+    no_hold:
+      value: true
+      required: false

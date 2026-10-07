@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coding-agents"
+version = "0.1.0"
+description = "MBABench coding-agent pipeline: run benchmark tasks through Claude Code / Codex in per-attempt sandboxes."
+requires-python = ">=3.10"
+dependencies = [
+    "PyYAML>=6",
+    "openpyxl>=3.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["coding_agent*"]
+
+[tool.setuptools.package-data]
+coding_agent = ["prompts/*.txt", "agent_identities.yaml"]

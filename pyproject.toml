@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mbabench"
+version = "1.0.0"
+description = "MBABench: financial-modelling tasks solved in Excel, the agent pipelines that attempt them, and the LLM judge that grades them."
+requires-python = ">=3.12"
+dependencies = [
+    # Workspace members — see [tool.uv.sources].
+    "excel-judge",
+    "excel-cli-agent",
+    "coding-agents",
+    "gui-system",
+    "excel-agents",
+    # scripts/
+    "pyyaml>=6.0",
+    "huggingface_hub>=0.30",
+]
+
+[tool.uv.workspace]
+members = [
+    "judge",
+    "cli-agents",
+    "coding-agents",
+    "gui-agents",
+    "excel-agents",
+]
+
+[tool.uv.sources]
+excel-judge = { workspace = true }
+excel-cli-agent = { workspace = true }
+coding-agents = { workspace = true }
+gui-system = { workspace = true }
+excel-agents = { workspace = true }
+
+# Expose the shared config loader (config/python/config.py) as the importable
+# top-level `config` module. An editable install keeps config.py at its real
+# location, so Config.load() still finds config/config_default.yaml one level up.
+[tool.setuptools]
+py-modules = ["config"]
+
+[tool.setuptools.package-dir]
+"" = "config/python"

@@ -1,0 +1,109 @@
+# Agent identity registry — THE place that defines what a cohort name means.
+#
+# A run config names its cohort with ONE key, agent_model_name (the value
+# written to task_attempts.agent_model_name), and nothing else about the
+# model. The entry here for that label supplies every setting that changes
+# what the agent does; the runner copies them into the engine config and
+# refuses to start if the config carries any of them itself (even with the
+# same value — one source of truth):
+#
+#   provider          which add-in the engine drives:
+#                       claude_excel_agent | chatgpt_excel_agent
+#   ui_model_label    The EXACT text of the add-in's model item. Claude:
+#                     the model dropdown ("Opus 4.6", "Fable 5", ...).
+#                     ChatGPT: the Model group of the combined "Model and
+#                     thinking effort" menu ("GPT-5.6 Sol", ...). ChatGPT
+#                     entries that pin null predate the picker and are
+#                     refused at resolve time (they stay below as
+#                     append-only history). The engine selects the label
+#                     AND re-reads the trigger afterwards, aborting the
+#                     attempt (infra, unrecorded) if the UI does not show
+#                     it.
+#   thinking_effort   ChatGPT only: the "Thinking effort" label
+#                     ("Instant" | "Medium" | "High" | "Extra High";
+#                     "Fast" | "Standard" | "Heavy" on the earlier UI),
+#                     selected and verified the same fail-loud way.
+#                     null for Claude.
+#   agent_folder      the agent name stamped into the attempt's filenames.
+#   agent_model_type  always "excel" — the task_attempts.agent_model_type
+#                     for this pipeline (gui/api/coding_cli are the others).
+#
+# An unknown label refuses to run and prints a ready-to-paste stanza.
+# The resolved settings are also written to the attempt row's extra_configs
+# on every publish, so a row records the exact settings it ran under and can
+# be audited without trusting this file.
+#
+# Existing entries should normally not change. agent_model_name is what
+# identifies a group of runs: trial counting, coverage, the judge, and the
+# paper tables all group rows by it and assume every row under a label ran
+# with the same settings. To run with different values, add a NEW entry
+# with a new label.
+#
+# Rules, enforced at load: every agent_model_name unique; every
+# (provider, ui_model_label, thinking_effort) combination unique; every
+# field above present on every entry; agent_model_type must be "excel".
+
+- agent_model_name: claude_excel_opus_4_6
+  provider: claude_excel_agent
+  ui_model_label: "Opus 4.6"
+  thinking_effort: null
+  agent_folder: claude_excel_opus_4_6
+  agent_model_type: excel
+
+- agent_model_name: claude_excel_sonnet_4_6
+  provider: claude_excel_agent
+  ui_model_label: "Sonnet 4.6"
+  thinking_effort: null
+  agent_folder: claude_excel_sonnet_4_6
+  agent_model_type: excel
+
+- agent_model_name: chatgpt_excel_heavy
+  provider: chatgpt_excel_agent
+  ui_model_label: null
+  thinking_effort: "Heavy"
+  agent_folder: chatgpt_excel_heavy
+  agent_model_type: excel
+
+# Claude add-in model dropdown: "Fable 5.1" / "Opus 5" / "Sonnet 5" /
+# "Fable 5" / "Opus 4.8".
+- agent_model_name: claude_excel_fable_5
+  provider: claude_excel_agent
+  ui_model_label: "Fable 5"
+  thinking_effort: null
+  agent_folder: claude_excel_fable_5
+  agent_model_type: excel
+
+# ChatGPT add-in: the composer has a combined "Model and thinking effort"
+# menu (Model: "GPT-5.5 Thinking" / "GPT-5.6 Sol"; Thinking effort:
+# "Instant" / "Medium" / "High" / "Extra High"). chatgpt_excel_heavy above
+# predates the picker — its "Heavy" label no longer exists and it pins no
+# model, so resolve refuses it; it stays as append-only history. A fresh
+# panel chat defaults to GPT-5.5 Thinking, so ChatGPT identities must pin
+# the model explicitly.
+- agent_model_name: chatgpt_excel_gpt_5_6_sol_xhigh
+  provider: chatgpt_excel_agent
+  ui_model_label: "GPT-5.6 Sol"
+  thinking_effort: "Extra High"
+  agent_folder: chatgpt_excel_gpt_5_6_sol_xhigh
+  agent_model_type: excel
+
+# Fable 5.1 in the Claude add-in (the dropdown default). The add-in exposes
+# no effort tiers; its only reasoning control is the "Toggle extended
+# thinking" button, which handle_initial_setup pins ON and verifies (an
+# unverifiable toggle aborts the attempt as infra).
+- agent_model_name: claude_excel_fable_5_1
+  provider: claude_excel_agent
+  ui_model_label: "Fable 5.1"
+  thinking_effort: null
+  agent_folder: claude_excel_fable_5_1
+  agent_model_type: excel
+
+# Opus 5 in the Claude add-in. No effort control; the "Toggle extended
+# thinking" button is a live toggle under Opus 5 (locked on under Fable 5.1)
+# and is pinned ON by handle_initial_setup, as for every Claude identity.
+- agent_model_name: claude_excel_opus_5
+  provider: claude_excel_agent
+  ui_model_label: "Opus 5"
+  thinking_effort: null
+  agent_folder: claude_excel_opus_5
+  agent_model_type: excel

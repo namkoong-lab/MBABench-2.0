@@ -1,0 +1,27 @@
+[project]
+name = "excel_judge"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+# Kept in sync with what judge/ actually imports. Previously these lived in
+# judge/setups/requirements.txt as a flat pin list; they are declared here so
+# `uv sync` from the repo root resolves them with everything else.
+dependencies = [
+    "openai>=2.0",
+    "anthropic>=0.123",   # native Messages API path (utils/anthropic_native.py)
+    "pypdf>=6.0",
+    "openpyxl>=3.1",
+    "pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+# Deliberately ships no importable packages. `main_scripts` and `utils` used to
+# be installed as top-level names, which squats the very generic `utils` in any
+# shared environment. Every judge entry point already does
+# `sys.path.insert(0, <judge root>)` before importing `utils.*`, so the install
+# only needs to contribute dependencies, not modules.
+[tool.setuptools]
+packages = []

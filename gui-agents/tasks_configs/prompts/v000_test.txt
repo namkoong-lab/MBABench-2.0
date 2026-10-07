@@ -1,0 +1,9 @@
+This is a plumbing test, not a modeling task. Ignore the content of the case entirely — do not analyze it, do not build a model, do not answer any question it asks.
+
+Do exactly this and nothing else:
+1. Take the attached .xlsx workbook and keep every existing sheet exactly as it is. Do not edit, reformat, reorder, rename, or delete any existing sheet, cell, formula, or value.
+2. Add ONE new sheet named exactly: TEST SHEET
+3. On that new sheet, put the text TEST in a single cell (cell A1), formatted in a large font — at least 48pt — and bold. Leave every other cell on the sheet empty.
+4. Return the result as an actual, downloadable .xlsx file. The workbook itself is the deliverable, not a summary or a description of what you did.
+
+Do not add any other sheets, notes, summaries, or explanations to the workbook. Reply with the finished .xlsx file for download.

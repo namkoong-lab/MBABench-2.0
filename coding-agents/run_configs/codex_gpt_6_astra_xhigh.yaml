@@ -1,0 +1,27 @@
+# codex_openai/gpt-6-astra-xhigh — Codex on GPT-6 Astra at effort xhigh (the
+# top tier the Codex CLI reaches), OpenAI API direct.
+#
+# Run from the repo root with OPENAI_API_KEY in the environment (or
+# keys.openai_api_key in config/config.yaml) and the sandbox image built
+# (docker build -t mbabench-coding-agent:v2 coding-agents/docker/):
+#
+#   uv run python -m coding_agent.run_sweep --config coding-agents/run_configs/codex_gpt_6_astra_xhigh.yaml --dry-run
+#   uv run python -m coding_agent.run_sweep --config coding-agents/run_configs/codex_gpt_6_astra_xhigh.yaml
+#   uv run python -m coding_agent.run_task  --config coding-agents/run_configs/codex_gpt_6_astra_xhigh.yaml --task-id 11
+#
+# Everything the attempt does is pinned elsewhere and referenced from here:
+# the cli / model / effort / extra_args / env by the agent_model_name entry in
+# coding_agent/agent_identities.yaml, the prompt by template_version
+# (v13 + system_prompt_coding_v1 -> prompt_version 113), the CLI versions by
+# the sandbox image tag. Tasks are read from <data_root>/tasks/ and attempts
+# written to <output_root>/attempts/codex_openai/gpt-6-astra-xhigh/; a
+# relaunch skips tasks that already have a non-failed row.
+agent_model_name: codex_openai/gpt-6-astra-xhigh
+template_version: v13
+
+tasks:
+  first: 1
+  last: 101
+
+sandbox:
+  image: mbabench-coding-agent:v2

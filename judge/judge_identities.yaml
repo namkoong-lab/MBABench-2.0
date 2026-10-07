@@ -1,0 +1,122 @@
+# Judge identity registry — what a grader_model label means.
+#
+# `--model <label>` resolves here (utils/judge_identity.py); the entry pins
+# provider (endpoint), the wire model id, and the reasoning effort. Rules,
+# enforced at load: label unique; (provider, model, effort) unique; every
+# key present on every entry. Unknown label -> refusal + paste-ready stanza.
+#
+# Labels are the exact strings stored in gradings.grader_model, so re-grades
+# under an existing label keep hitting the endpoint that label used. The
+# entries below are every label the published gradings were produced under.
+#
+# Policy: OpenAI grader models always use the OpenAI API directly — never
+# register an openai/* label with provider: openrouter.
+
+- grader_model: google/gemini-2.5-pro
+  provider: openrouter                # was in judge.openrouter_models
+  model: google/gemini-2.5-pro
+  effort: minimal
+
+- grader_model: google/gemini-2.5-flash
+  provider: openrouter                # was in judge.openrouter_models
+  model: google/gemini-2.5-flash
+  effort: minimal
+
+- grader_model: google/gemini-3.5-flash
+  provider: openrouter                # was in judge.openrouter_models
+  model: google/gemini-3.5-flash
+  effort: minimal
+
+# Graded via Gemini-direct (never in openrouter_models).
+- grader_model: google/gemini-3.5-flash-lite
+  provider: gemini
+  model: gemini-3.5-flash-lite
+  effort: minimal
+
+- grader_model: google/gemini-3-flash-preview
+  provider: gemini
+  model: gemini-3-flash-preview
+  effort: minimal
+
+# Judge-robustness study graders.
+- grader_model: anthropic/claude-opus-4-8
+  provider: anthropic
+  model: claude-opus-4-8
+  effort: null                        # anthropic path drops reasoning_effort
+
+- grader_model: openai/gpt-5.5
+  provider: openai
+  model: gpt-5.5
+  effort: none                        # only effort chat/completions accepts with tools
+
+# Judge bake-off 2026-08, revised roster (maintainer 2026-08-31): the evaluation
+# is gemini-3.7-flash @low vs @high vs gpt-5.6-sol; gemini-3.5-flash and
+# claude-opus-5 arms are retired. 3.7-flash's effort scale is low / medium
+# (provider default) / high — both our lanes set it explicitly, so neither
+# rides the default. The stanza pins `low`; the high lane passes
+# --reasoning-effort high, recorded in gradings.grader_reasoning.
+# (2026-09-02: a second stanza for this same label, pinned `high`, was
+# appended by 07d0e1a without noticing this one; labels must be unique, so
+# the registry refused to LOAD for every grader. The duplicate was removed;
+# this original entry stands. The label string still matches the bake-off
+# rows' gradings.grader_model exactly.)
+- grader_model: google/gemini-3.7-flash
+  provider: openrouter                # keeps OpenRouter's exact per-call cost
+  model: google/gemini-3.7-flash
+  effort: low
+
+# Judge bake-off 2026-08 graders (judge_version 3; vs google/gemini-3.5-flash
+# above). Minimal/lowest effort posture for all three — no reasoning-plumbing.
+# Default grader (project_configs.yaml judge.default_grader).
+- grader_model: openai/gpt-5.6-sol
+  provider: openai                    # policy: OpenAI graders never via openrouter
+  model: gpt-5.6-sol
+  effort: none                        # chat/completions accepts none/low/medium/high/xhigh; function tools force none anyway
+
+- grader_model: anthropic/claude-opus-5
+  provider: anthropic
+  model: claude-opus-5
+  effort: null                        # anthropic path drops reasoning_effort; Opus 5 thinking is always-on (its floor)
+
+# Stage 3 "better judge" arm (2026-09-22): Fable 5.1 as grader at its default
+# effort (null = output_config.effort omitted), native Anthropic path. No
+# price line in llm_utils: rows carry the (10, 30) fallback estimate; ground
+# truth is the Anthropic credits delta.
+- grader_model: anthropic/claude-fable-5-1
+  provider: anthropic
+  model: claude-fable-5-1
+  effort: null
+
+# Judge-effort canary graders (2026-09-01). One label per model — the low/high
+# arms run via --reasoning-effort overrides on the same label, recorded in
+# gradings.grader_reasoning, so each model stays ONE grader population.
+# Probed live with function tools before registration:
+#   sol/terra tiers on the wire: none | low | medium | high | xhigh
+#     ('minimal' and 'max' rejected; real tiers require /v1/responses —
+#     utils/openai_responses.py routes those; 'none' stays chat/completions)
+#   sonnet tiers: low | medium | high | xhigh | max (Anthropic default high).
+#     NOTE 2026-09-02: Anthropic's OpenAI-compat endpoint documents
+#     `reasoning_effort` as IGNORED (and no prompt caching, no cached-token
+#     usage), so the 2026-09-01 "honored" probe was one noisy sample and the
+#     sonnet@low canary arm most likely ran at the default. Single-pass now
+#     routes provider=anthropic through the native Messages API
+#     (utils/anthropic_native.py: output_config.effort + cache_control), so
+#     effort arms are real from judge v6 on.
+- grader_model: openai/gpt-5.6-terra
+  provider: openai                    # policy: OpenAI graders never via openrouter
+  model: gpt-5.6-terra
+  effort: none                        # mirror of the sol entry's convention
+- grader_model: anthropic/claude-sonnet-5
+  provider: anthropic
+  model: claude-sonnet-5
+  effort: high                        # Anthropic's own default for Sonnet 5 = the bake-off "Sonnet, high (default)" arm
+
+# TensorBlock Forge route (2026-09-15). Same model and effort as
+# openai/gpt-5.6-sol, reached through the Forge gateway and billed to Forge
+# credits — a separate label so every grading row shows the route. Ladder-
+# tested 2026-09-15: models.list, plain chat, function tools + effort none
+# (reasoning_tokens 0), invalid effort rejected upstream (pass-through).
+- grader_model: tensorblock/gpt-5.6-sol
+  provider: tensorblock
+  model: tensorblock/gpt-5.6-sol       # Forge's id; the response echoes gpt-5.6-sol-2026-07-09
+  effort: none                        # real tiers (low..xhigh) also work — routed via /v1/responses like provider openai

@@ -1,0 +1,28 @@
+[project]
+name = "gui-system"
+version = "0.1.0"
+description = "Web-based AI agent automation for Claude.ai and ChatGPT"
+requires-python = ">=3.12"
+
+# Trimmed to what the code actually imports. Dropped from the previous list:
+# patchright, pandas, numpy, requests and httpx (no importer anywhere under
+# gui-agents/), pathlib2 (a Python 2 backport), and pytest/pytest-asyncio
+# (test tooling — now in the root [dependency-groups] dev group).
+dependencies = [
+    # Browser automation — drives system Chrome over CDP.
+    "playwright>=1.54.0",
+    "pyyaml>=6.0.2",
+    "openpyxl>=3.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+# Required: this is a flat layout with several top-level directories (data/,
+# docs/, scratch/, tasks_configs/, dated capture dirs...). Without an explicit
+# include list setuptools refuses to build at all, erroring on multiple
+# discovered top-level packages. Entry points still reach these via their own
+# `sys.path.insert(0, <repo root>)`; the install just makes them resolvable.
+[tool.setuptools.packages.find]
+include = ["infra*", "task_io*", "claude_web_agent*"]
