@@ -554,6 +554,7 @@ def grade_single_attempt(
             "task_id": attempt["task_id"],
             "success": False,
             "error": str(e),
+            "error_type": type(e).__name__,
             "retry_later": retry_later,
             "traceback": traceback.format_exc(),
             "task_folder": str(task_folder),
@@ -1019,6 +1020,34 @@ def main(args):
                 max_forced_rounds=args.max_forced_rounds,
                 det_checks=args.det_checks,
             )
+
+            if (not result["success"] and result.get("error_type") == "FormulaCacheError"
+                    and not args.run_calculation):
+                # The workbook was saved without cached values (openpyxl output,
+                # as the CLI and coding pipelines deliver). Recalculate it in
+                # LibreOffice and grade, instead of failing the attempt.
+                logger.info("  formulas have no cached values: recalculating in LibreOffice and grading again")
+                result = grade_single_attempt(
+                    attempt=attempt,
+                    client=client,
+                    rubric_path=rubric_path,
+                    rubric_weight_path=rubric_weight_path,
+                    template_path=template_path,
+                    model=model,
+                    scratch_run_dir=scratch_run_dir,
+                    nocall=args.nocall,
+                    run_calculation=True,
+                    cached_solution_csv_dir=cached_dir,
+                    cached_attempt_csv_dir=None,
+                    cached_starting_csv_dir=cached_starting_dir,
+                    attempt_sheet_name_filter=attempt_filter,
+                    ignore_sheets=args.ignore_sheets,
+                    max_tool_rounds=args.max_tool_rounds,
+                    reasoning_effort=args.reasoning_effort,
+                    accuracy_check=args.accuracy_check,
+                    max_forced_rounds=args.max_forced_rounds,
+                    det_checks=args.det_checks,
+                )
 
             finished = result["success"] and not result.get("skipped")
             if finished and result.get("solution_csv_dir"):

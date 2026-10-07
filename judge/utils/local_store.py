@@ -368,7 +368,9 @@ def graded_attempt_ids(grader_model: str | None = None) -> set:
     `grader_model` when given)."""
     out = set()
     for row in grading_rows():
-        if row.get("deprecated"):
+        if row.get("deprecated") or row.get("failed"):
+            # a failed grading (no model output, parse failure, scoring
+            # hazard) is kept for audit but never blocks grading again
             continue
         if grader_model is not None and row.get("grader_model") != grader_model:
             continue
