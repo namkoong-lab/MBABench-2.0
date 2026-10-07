@@ -128,7 +128,11 @@ class SandboxConfig:
 @dataclass
 class LimitsConfig:
     wall_clock_seconds: int = 14400  # 4h
-    junk_seconds: int = 180
+    # A success faster than this many seconds is held as needs_review instead
+    # of recorded (a guard for junk deliveries by slow frontier cohorts). Off by
+    # default: small or low-effort models legitimately finish a task in under a
+    # minute. Re-enable per run with `limits: {junk_seconds: 180}`.
+    junk_seconds: int = 0
     # When true, time the relay spends waiting out provider 429 / quota
     # refusals (its upstream_retries delays) does not count against the wall
     # clock - the agent still gets wall_clock_seconds of working time. Off by

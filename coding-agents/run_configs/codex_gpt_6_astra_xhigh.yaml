@@ -25,3 +25,6 @@ tasks:
 
 sandbox:
   image: mbabench-coding-agent:v2
+
+# limits:
+#   junk_seconds: 180   # hold successes faster than this as needs_review (default 0 = off)
