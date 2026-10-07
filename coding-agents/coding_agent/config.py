@@ -296,6 +296,12 @@ def house_standards_provenance(cfg: RunConfig) -> dict:
 
 def load_config(path: str | Path) -> RunConfig:
     path = Path(path)
+    if not path.is_file():
+        hint = ""
+        candidate = Path(__file__).resolve().parents[1] / "run_configs" / path.name
+        if candidate.is_file():
+            hint = f" (did you mean run_configs/{path.name}?)"
+        raise SystemExit(f"run config not found: {path}{hint}")
     raw = yaml.safe_load(path.read_text()) or {}
     stale = [k for k in STALE_KEYS if k in raw]
     if stale:
