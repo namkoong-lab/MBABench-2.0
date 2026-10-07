@@ -366,3 +366,18 @@
   fresh_context_mode: true
   enhanced_excel_context: true
   recent_history_count: 3
+
+# Route example (2026-10-07): the same model and effort as
+# openpyxl_openai/gpt-6-astra-xhigh (direct) and
+# openpyxl_tensorblock/gpt-6-astra-xhigh (Forge), through OpenRouter. The
+# executor picks keys.openrouter_api_key from the base_url; OpenRouter names
+# models vendor/model. See examples/routes/.
+- agent_model_name: openpyxl_openrouter/gpt-6-astra-xhigh
+  model: openai/gpt-6-astra
+  reasoning_effort: xhigh
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://openrouter.ai/api/v1
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3

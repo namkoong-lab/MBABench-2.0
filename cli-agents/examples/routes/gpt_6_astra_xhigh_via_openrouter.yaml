@@ -1,0 +1,20 @@
+# openpyxl_openrouter/gpt-6-astra-xhigh — route example: the same model through OpenRouter. The three files in this folder differ only in the label; the identity entries differ only in model id, base_url and key.
+# Model openai/gpt-6-astra at effort xhigh, endpoint https://openrouter.ai/api/v1.
+# Needs keys.openrouter_api_key in config/config.yaml (or the matching env var).
+#
+#   cd cli-agents
+#   uv run excel-agent --batch-config examples/routes/gpt_6_astra_xhigh_via_openrouter.yaml --dry-run
+#   uv run excel-agent --batch-config examples/routes/gpt_6_astra_xhigh_via_openrouter.yaml
+#
+# Omit task_ids to run every task; a relaunch skips tasks that already have a
+# non-failed row for this label. The identity entry in
+# excel_cli_agent/agent_identities.yaml pins everything about the model.
+
+batch_name: "openpyxl_openrouter/gpt-6-astra-xhigh - all tasks (v16)"
+agent_model_name: "openpyxl_openrouter/gpt-6-astra-xhigh"
+prompt_version: "v16"
+skip_if_attempted: true
+verbose: true
+max_iterations: 40
+api_timeout_seconds: 3600
+cleanup_workspace: true

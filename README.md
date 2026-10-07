@@ -136,6 +136,14 @@ pipeline's gitignored `infra/configs/configs.yaml`.
 `--dry-run` resolves the task, prompt, attachments and output path without touching a model or
 a browser. Each example config has a header comment on what to change.
 
+**Ready-made configs.** Every cohort that calls a vendor API directly has a config waiting:
+`cli-agents/examples/`, `coding-agents/run_configs/`, `gui-agents/infra/configs/run_configs/`
+and `excel-agents/infra/configs/run_configs/`, one file per registered label. The `routes/`
+subfolders show one model through different endpoints: GPT-6 Astra on the CLI pipeline direct,
+through TensorBlock Forge and through OpenRouter, and Claude Fable 5.1 on the coding pipeline
+direct (Claude Code) and through Forge (Codex). The files differ only in the label; the
+registry entries behind them differ only in model id, endpoint and key.
+
 **Try one task first.** A full cohort is 101 attempts; start with one. CLI: set `task_ids: [1]`
 in the batch config. Coding: `--task-ids 1`. GUI and Excel: `--task-id 1`. Then grade it with
 `grade.py --all` (below) and look at `outputs/gradings/<id>/scores.json`.

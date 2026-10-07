@@ -1,0 +1,31 @@
+# claude_excel_opus_4_6 — Claude add-in, model "Opus 4.6". No API key: Chrome signed in to Microsoft 365 with the
+# add-in installed, task workbooks in OneDrive (scripts/provision_onedrive.py).
+# Run from excel-agents/:
+#
+#   uv run python -m infra.run --dry-run --task-id 1 --run-config infra/configs/run_configs/claude_excel_opus_4_6.yaml
+#   uv run python -m infra.run -y --run-config infra/configs/run_configs/claude_excel_opus_4_6.yaml
+#
+# agent_model_name is the only model key; agent_identities.yaml pins the rest.
+# The add-in must still offer this model in its menu.
+
+agent_model_name: claude_excel_opus_4_6
+prompt_version: 205
+
+source:
+  kind: bundle
+  filters:
+    task_ids: []
+    skip_already_attempted: true
+
+sink:
+  kind: local
+
+claude_excel_agent:
+  max_sec_per_task: 7200
+  max_wait_per_prompt_seconds: 7200
+  check_interval_seconds: 2
+  panel_boot_timeout_seconds: 30
+
+runner:
+  max_infra_tries: 3
+  sleep_between_retries: 20

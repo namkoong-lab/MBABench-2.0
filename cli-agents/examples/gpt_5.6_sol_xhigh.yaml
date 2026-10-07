@@ -1,0 +1,20 @@
+# openpyxl_openai/gpt-5.6-sol-xhigh — vendor API direct
+# Model gpt-5.6-sol at effort xhigh, endpoint https://api.openai.com/v1.
+# Needs keys.openai_api_key in config/config.yaml (or the matching env var).
+#
+#   cd cli-agents
+#   uv run excel-agent --batch-config examples/gpt_5.6_sol_xhigh.yaml --dry-run
+#   uv run excel-agent --batch-config examples/gpt_5.6_sol_xhigh.yaml
+#
+# Omit task_ids to run every task; a relaunch skips tasks that already have a
+# non-failed row for this label. The identity entry in
+# excel_cli_agent/agent_identities.yaml pins everything about the model.
+
+batch_name: "openpyxl_openai/gpt-5.6-sol-xhigh - all tasks (v16)"
+agent_model_name: "openpyxl_openai/gpt-5.6-sol-xhigh"
+prompt_version: "v16"
+skip_if_attempted: true
+verbose: true
+max_iterations: 40
+api_timeout_seconds: 3600
+cleanup_workspace: true

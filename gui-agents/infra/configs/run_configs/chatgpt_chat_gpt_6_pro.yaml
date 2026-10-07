@@ -1,0 +1,32 @@
+# chatgpt_chat_gpt_6_pro — the GPT-6 generation in chat mode at Pro (the UI shows the model only as 6Pro). No API key: Chrome signed in to chatgpt.com
+# (scripts/setup_chrome.sh chatgpt). Run from gui-agents/:
+#
+#   uv run python -m infra.run --dry-run --task-id 1 --run-config infra/configs/run_configs/chatgpt_chat_gpt_6_pro.yaml
+#   uv run python -m infra.run -y --run-config infra/configs/run_configs/chatgpt_chat_gpt_6_pro.yaml
+#
+# The label is derived from provider.kind + the chatgpt_web block; the combination
+# must exist in infra/configs/agent_identity.py. The vendor must still offer this
+# model and effort in its UI.
+
+source:
+  kind: bundle
+  filters:
+    task_ids: []
+    skip_already_attempted: true
+
+sink:
+  kind: local
+
+prompt_version: 205
+
+provider:
+  kind: "chatgpt"
+
+chatgpt_web:
+  project_id: null
+  project_slug: null
+  mode: "chat"
+  model: "gpt_6"                     # chat offers the GPT-6 generation only as "6Pro"
+  intelligence: "pro"                # chat-mode ladder Instant..Pro: Pro
+  effort: null                       # work-mode axes; unused in chat mode
+  speed: null

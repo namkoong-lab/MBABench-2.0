@@ -1,0 +1,20 @@
+# openpyxl_anthropic/claude-fable-5-max — vendor API direct
+# Model claude-fable-5 at effort max, endpoint https://api.anthropic.com.
+# Needs keys.anthropic_api_key in config/config.yaml (or the matching env var).
+#
+#   cd cli-agents
+#   uv run excel-agent --batch-config examples/claude_fable_5_max.yaml --dry-run
+#   uv run excel-agent --batch-config examples/claude_fable_5_max.yaml
+#
+# Omit task_ids to run every task; a relaunch skips tasks that already have a
+# non-failed row for this label. The identity entry in
+# excel_cli_agent/agent_identities.yaml pins everything about the model.
+
+batch_name: "openpyxl_anthropic/claude-fable-5-max - all tasks (v16)"
+agent_model_name: "openpyxl_anthropic/claude-fable-5-max"
+prompt_version: "v16"
+skip_if_attempted: true
+verbose: true
+max_iterations: 40
+api_timeout_seconds: 3600
+cleanup_workspace: true

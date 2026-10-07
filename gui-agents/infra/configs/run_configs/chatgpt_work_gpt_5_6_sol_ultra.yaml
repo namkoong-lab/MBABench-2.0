@@ -1,0 +1,32 @@
+# chatgpt_work_gpt_5_6_sol_ultra — GPT-5.6 Sol in work mode at Ultra. No API key: Chrome signed in to chatgpt.com
+# (scripts/setup_chrome.sh chatgpt). Run from gui-agents/:
+#
+#   uv run python -m infra.run --dry-run --task-id 1 --run-config infra/configs/run_configs/chatgpt_work_gpt_5_6_sol_ultra.yaml
+#   uv run python -m infra.run -y --run-config infra/configs/run_configs/chatgpt_work_gpt_5_6_sol_ultra.yaml
+#
+# The label is derived from provider.kind + the chatgpt_web block; the combination
+# must exist in infra/configs/agent_identity.py. The vendor must still offer this
+# model and effort in its UI.
+
+source:
+  kind: bundle
+  filters:
+    task_ids: []
+    skip_already_attempted: true
+
+sink:
+  kind: local
+
+prompt_version: 205
+
+provider:
+  kind: "chatgpt"
+
+chatgpt_web:
+  project_id: null
+  project_slug: null
+  mode: "work"
+  model: "gpt_5_6_sol"
+  effort: "ultra"
+  speed: "standard"
+  intelligence: null

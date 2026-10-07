@@ -1,0 +1,24 @@
+# claudecode_anthropic/claude-opus-5-5-high — vendor API direct
+# Claude Code CLI driving claude-opus-5-5 at effort high, vendor API direct.
+# Needs keys.anthropic_api_key in config/config.yaml (or the env var), Docker, and the sandbox
+# image (docker build -t mbabench-coding-agent:v2 docker/).
+#
+#   cd coding-agents
+#   uv run python -m coding_agent.run_sweep --config run_configs/claude_opus_5_5_high.yaml --dry-run
+#   uv run python -m coding_agent.run_sweep --config run_configs/claude_opus_5_5_high.yaml
+#
+# --task-ids 1,5,9-12 narrows the range below; a relaunch skips tasks that
+# already have a non-failed row for this label.
+
+agent_model_name: claudecode_anthropic/claude-opus-5-5-high
+template_version: v13
+
+tasks:
+  first: 1
+  last: 101
+
+sandbox:
+  image: mbabench-coding-agent:v2
+
+# limits:
+#   junk_seconds: 180   # hold successes faster than this as needs_review (default 0 = off)

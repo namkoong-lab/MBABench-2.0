@@ -1,0 +1,30 @@
+# claude_cowork_opus_5_max — Claude Opus 5 in cowork mode at Max. No API key: Chrome signed in to claude.ai
+# (scripts/setup_chrome.sh claude). Run from gui-agents/:
+#
+#   uv run python -m infra.run --dry-run --task-id 1 --run-config infra/configs/run_configs/claude_cowork_opus_5_max.yaml
+#   uv run python -m infra.run -y --run-config infra/configs/run_configs/claude_cowork_opus_5_max.yaml
+#
+# The label is derived from provider.kind + the claude_web block; the combination
+# must exist in infra/configs/agent_identity.py. The vendor must still offer this
+# model and effort in its UI.
+
+source:
+  kind: bundle
+  filters:
+    task_ids: []
+    skip_already_attempted: true
+
+sink:
+  kind: local
+
+prompt_version: 205
+
+provider:
+  kind: "claude"
+
+claude_web:
+  mode: "cowork"
+  cowork_approval: "auto"
+  model: "opus_5"
+  effort: "max"
+  project_id: null
