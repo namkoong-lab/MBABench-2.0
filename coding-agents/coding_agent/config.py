@@ -383,4 +383,19 @@ def resolve_secrets(cfg: RunConfig) -> str:
             f"to coding_agent/, or <MBABench>/config/config.yaml "
             f"keys.{AGENT_KEY_CONFIG[cfg.agent.cli]}"
         )
+    # The vendors' key prefixes differ (Anthropic: sk-ant-..., OpenAI: sk-... but
+    # never sk-ant-). A key in the wrong slot would otherwise be retried 15 times
+    # against the wrong API as 401 Unauthorized before the attempt fails.
+    if not forge:
+        looks_anthropic = api_key.startswith("sk-ant-")
+        if cfg.agent.cli == "codex" and looks_anthropic:
+            raise SystemExit(
+                f"{cfg.api_key_env} holds an Anthropic key (sk-ant-...); Codex needs an "
+                f"OpenAI key — check keys.openai_api_key in <MBABench>/config/config.yaml"
+            )
+        if cfg.agent.cli == "claude" and api_key.startswith("sk-") and not looks_anthropic:
+            raise SystemExit(
+                f"{cfg.api_key_env} does not look like an Anthropic key (sk-ant-...); "
+                f"check keys.anthropic_api_key in <MBABench>/config/config.yaml"
+            )
     return api_key
