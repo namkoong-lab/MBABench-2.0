@@ -30,13 +30,11 @@ and a paid account with the vendor.
 ```bash
 git clone https://github.com/namkoong-lab/MBABench && cd MBABench
 ./setup.sh
-hf auth login
 uv run python scripts/download_dataset.py
 ```
 
 `setup.sh` creates `.venv`, installs every package and creates `config/config.yaml` from the
-defaults. `hf auth login` is needed once because the dataset is private. The download lands in
-`data/` and is verified against the dataset's `MANIFEST.json`.
+defaults. The download lands in `data/` and is verified against the dataset's `MANIFEST.json`.
 
 ## Configure
 
@@ -265,3 +263,7 @@ outputs/
 Each `data/tasks/task_id=<N>/task.json` carries `task_name`, `difficulty` (Easy to Hard),
 `difficulty_score`, `model_type`, a one-line `description`, `estimated_solve_time_hours`, and the
 `starting_files` / `solution_files` paths. `data/tasks.jsonl` has the same rows in one file.
+
+## License
+
+Apache License 2.0; see `LICENSE`.

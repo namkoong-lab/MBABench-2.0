@@ -5,7 +5,7 @@
     uv run python scripts/download_dataset.py --verify-only   # re-check an existing download
     uv run python scripts/download_dataset.py --dest /else/where
 
-The dataset is private: log in once with `hf auth login` (or set HF_TOKEN).
+No login is needed for the public dataset; a private or gated copy needs `hf auth login` (or HF_TOKEN).
 After the download every file is checked against MANIFEST.json (size + sha256).
 Exit code 1 if anything is missing or differs.
 """
