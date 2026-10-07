@@ -29,10 +29,14 @@ and a paid account with the vendor.
 
 ```bash
 git clone https://github.com/namkoong-lab/MBABench && cd MBABench
-./setup.sh                                   # creates .venv, installs everything, creates config/config.yaml
-hf auth login                                # once; the dataset is private
-uv run python scripts/download_dataset.py    # -> data/, verified against MANIFEST.json
+./setup.sh
+hf auth login
+uv run python scripts/download_dataset.py
 ```
+
+`setup.sh` creates `.venv`, installs every package and creates `config/config.yaml` from the
+defaults. `hf auth login` is needed once because the dataset is private. The download lands in
+`data/` and is verified against the dataset's `MANIFEST.json`.
 
 ## Configure
 
@@ -87,12 +91,14 @@ uv run python -m infra.run -y        --run-config infra/configs/run_configs/clau
 ```
 
 **Excel** — the Claude or ChatGPT add-in inside Excel Online. Chrome must be signed in to
-Microsoft 365 with the add-in installed, and the task workbooks must sit in OneDrive:
+Microsoft 365 with the add-in installed, and the task workbooks must sit in OneDrive.
+`setup_chrome.sh` launches Chrome on the debugging port; `provision_onedrive.py` uploads the
+task workbooks from `data/` to OneDrive (run it with `--dry-run` first, then without):
 
 ```bash
 cd excel-agents
-scripts/setup_chrome.sh                                   # launches Chrome on the CDP port
-uv run python scripts/provision_onedrive.py --dry-run     # then without --dry-run: uploads data/ tasks to OneDrive
+scripts/setup_chrome.sh
+uv run python scripts/provision_onedrive.py --dry-run
 uv run python -m infra.run --dry-run --run-config infra/configs/run_configs/claude_excel_fable_5_1.yaml
 uv run python -m infra.run -y        --run-config infra/configs/run_configs/claude_excel_fable_5_1.yaml
 ```
@@ -112,11 +118,14 @@ folder of evidence per grading. The default grader is `openai/gpt-5.6-sol` (abou
 minutes per attempt); `judge/judge_identities.yaml` lists the others.
 
 ```bash
-uv run python judge/main_scripts/grade.py --all --dry-run                 # what would be graded
-uv run python judge/main_scripts/grade.py --all                           # grade everything not yet graded
+uv run python judge/main_scripts/grade.py --all --dry-run
+uv run python judge/main_scripts/grade.py --all
 uv run python judge/main_scripts/grade.py --agent-model-name <label> --workers 4
-uv run python judge/main_scripts/grade.py --attempt-ids <id> --regrade    # grade again
+uv run python judge/main_scripts/grade.py --attempt-ids <id> --regrade
 ```
+
+`--dry-run` lists what would be graded. `--all` grades every attempt that has no grading yet;
+`--regrade` grades again.
 
 To grade one workbook outside the benchmark flow, assemble a folder with `ai_attempt.xlsx`,
 `solution/<golden>.xlsx` and optionally `starting/<workbook>.xlsx`, and run
