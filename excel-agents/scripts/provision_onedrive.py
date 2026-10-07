@@ -256,7 +256,17 @@ async def _create_folder(page, name: str) -> bool:
 
 
 async def _enter_or_create_folder(page, name: str, create: bool) -> bool:
-    """Double-click into `name`, creating it first when allowed."""
+    """Open `name` the way the engine does, creating it first when needed.
+
+    The click comes first: `My files` (the first segment of onedrive_base_path)
+    is OneDrive's root view and a link in the left navigation, never a row in
+    a listing, so looking for a row and creating one on a miss would create a
+    stray folder called "My files" in the root (2026-10-07). Only a name that
+    neither the listing nor the navigation offers is created.
+    """
+    if await Navigation._try_find_and_click_folder(page, name):
+        await asyncio.sleep(1.5)
+        return True
     if not await _folder_visible(page, name):
         if not create:
             logger.error(f"   ❌ Folder missing: {name}")
@@ -334,7 +344,7 @@ async def _upload_file(page, local_path: Path) -> bool:
 
 async def _navigate_home(page) -> bool:
     try:
-        await page.goto("https://onedrive.live.com", wait_until="load", timeout=60000)
+        await page.goto("https://onedrive.live.com/my", wait_until="load", timeout=60000)  # the My files view, not Home
         await asyncio.sleep(3)
         return True
     except Exception as e:
