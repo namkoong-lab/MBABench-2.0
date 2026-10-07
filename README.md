@@ -98,21 +98,25 @@ uv run python -m infra.run --dry-run --run-config infra/configs/run_configs/clau
 uv run python -m infra.run -y        --run-config infra/configs/run_configs/claude_cowork_fable_5_1_max.yaml
 ```
 
-**Excel** — the Claude or ChatGPT add-in inside Excel Online. Once, launch the automation
-Chrome, sign in to Microsoft 365 with the add-in installed, and put the task workbooks in
-OneDrive. The engine opens each workbook at `My files / mbabench_tasks / <task_name> / Task /
-<workbook>` (the base folder is `onedrive_base_path` in `infra/configs/configs.yaml`). The
-quickest way to build that tree is by hand: `--stage` writes it locally under
-`onedrive_staging/`, you drag the task folders into `mbabench_tasks` in OneDrive web in one go,
-and `--verify` walks the result. Without `--stage` the script uploads through the browser itself,
-which is slower and exposed to OneDrive's UI changes.
+**Excel** — the Claude or ChatGPT add-in inside Excel Online. The engine opens each task's
+workbook from OneDrive at `My files / mbabench_tasks / <task_name> / Task / <workbook>`, so the
+workbooks have to be there before the first run. Once:
 
-```bash
-cd excel-agents
-scripts/setup_chrome.sh
-uv run python scripts/provision_onedrive.py --stage
-uv run python scripts/provision_onedrive.py --verify
-```
+1. Launch the automation Chrome and sign in to Microsoft 365, with the add-in installed:
+   `scripts/setup_chrome.sh`
+2. Build the folder tree locally. This writes `onedrive_staging/<task_name>/Task/<workbook>`
+   for every task in `data/`, names taken from `task.json`:
+   `uv run python scripts/provision_onedrive.py --stage`
+3. In OneDrive web, open **My files**, create a folder named `mbabench_tasks`, open it, and
+   drag all the task folders from `onedrive_staging/` into it in one go. Folder names must stay
+   exactly as staged.
+4. Check the result; this walks the tree read-only and writes `onedrive_manifest.json`:
+   `uv run python scripts/provision_onedrive.py --verify`
+
+`uv run python scripts/provision_onedrive.py` with no flag does the upload through the browser
+itself instead of step 3. It is slower and exposed to OneDrive's UI changes; try it on one task
+first with `--task-ids 81`. A different base folder goes in `onedrive_base_path` in the
+gitignored `infra/configs/configs.yaml`.
 
 Then run:
 
