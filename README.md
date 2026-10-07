@@ -1,4 +1,4 @@
-# MBABench
+# MBABenchV2
 
 MBABench asks an AI agent to do what a junior analyst does: take a business case
 and a starting workbook, and build a complete, working financial model in Excel.
