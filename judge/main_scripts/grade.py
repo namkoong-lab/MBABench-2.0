@@ -1027,6 +1027,11 @@ def main(args):
                 # as the CLI and coding pipelines deliver). Recalculate it in
                 # LibreOffice and grade, instead of failing the attempt.
                 logger.info("  formulas have no cached values: recalculating in LibreOffice and grading again")
+                # a fresh task folder: the first pass already extracted CSVs from
+                # the uncached workbook, and --run-calculation censuses the
+                # recalculated copy only when the extraction runs again
+                if result.get("task_folder"):
+                    shutil.rmtree(result["task_folder"], ignore_errors=True)
                 result = grade_single_attempt(
                     attempt=attempt,
                     client=client,
