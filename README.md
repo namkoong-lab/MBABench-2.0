@@ -81,27 +81,44 @@ uv run python -m coding_agent.run_sweep           --config run_configs/claude_co
 uv run python -m coding_agent.run_sweep --task-ids 1,2 --config run_configs/codex_gpt_6_astra_xhigh.yaml
 ```
 
-**GUI** — claude.ai or chatgpt.com driven through a real Chrome. Start Chrome with remote
-debugging on the port in `infra/configs/configs.yaml`, sign in, then:
+**GUI** — claude.ai or chatgpt.com driven through a real Chrome. Once per provider, launch
+the automation Chrome and sign in; the login persists in a profile under `browser_profiles/`
+and later runs reuse it (the engine relaunches Chrome itself if it is closed):
 
 ```bash
 cd gui-agents
+scripts/setup_chrome.sh claude
+scripts/setup_chrome.sh chatgpt
+```
+
+Then run:
+
+```bash
 uv run python -m infra.run --dry-run --run-config infra/configs/run_configs/claude_cowork_fable_5_1_max.yaml
 uv run python -m infra.run -y        --run-config infra/configs/run_configs/claude_cowork_fable_5_1_max.yaml
 ```
 
-**Excel** — the Claude or ChatGPT add-in inside Excel Online. Chrome must be signed in to
-Microsoft 365 with the add-in installed, and the task workbooks must sit in OneDrive.
-`setup_chrome.sh` launches Chrome on the debugging port; `provision_onedrive.py` uploads the
-task workbooks from `data/` to OneDrive (run it with `--dry-run` first, then without):
+**Excel** — the Claude or ChatGPT add-in inside Excel Online. Once, launch the automation
+Chrome, sign in to Microsoft 365 with the add-in installed, and upload the task workbooks to
+OneDrive (`provision_onedrive.py` reads them from `data/`; try `--dry-run` first):
 
 ```bash
 cd excel-agents
 scripts/setup_chrome.sh
 uv run python scripts/provision_onedrive.py --dry-run
+uv run python scripts/provision_onedrive.py
+```
+
+Then run:
+
+```bash
 uv run python -m infra.run --dry-run --run-config infra/configs/run_configs/claude_excel_fable_5_1.yaml
 uv run python -m infra.run -y        --run-config infra/configs/run_configs/claude_excel_fable_5_1.yaml
 ```
+
+All three browser setups default to Chrome's debugging port 9222 with their own profile, so
+run one signed-in Chrome at a time, or give the others another `browser.cdp_port` in the
+pipeline's gitignored `infra/configs/configs.yaml`.
 
 `--dry-run` resolves the task, prompt, attachments and output path without touching a model or
 a browser. Each example config has a header comment on what to change.
