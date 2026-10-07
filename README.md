@@ -110,6 +110,37 @@ a browser. Each example config has a header comment on what to change.
 in the batch config. Coding: `--task-ids 1`. GUI and Excel: `--task-id 1`. Then grade it with
 `grade.py --all` (below) and look at `outputs/gradings/<id>/scores.json`.
 
+## Models and routes
+
+A cohort label (`agent_model_name`) is an entry in the pipeline's identity registry, which pins
+the model, the effort and the API route. The shipped entries cover:
+
+| pipeline | registry | routes |
+|---|---|---|
+| CLI | `cli-agents/excel_cli_agent/agent_identities.yaml` | Anthropic direct, OpenAI direct, TensorBlock Forge; OpenRouter works with an entry whose `base_url` points at it |
+| Coding | `coding-agents/coding_agent/agent_identities.yaml` | Claude Code on Anthropic direct; Codex on OpenAI direct or through TensorBlock Forge |
+| GUI, Excel | `gui-agents/infra/configs/agent_identity.py`, `excel-agents/agent_identities.yaml` | the vendor's consumer product; no API key |
+| Judge | `judge/judge_identities.yaml` | OpenAI, Anthropic, Gemini, OpenRouter, TensorBlock graders |
+
+To run another model or route, append an entry and set the matching key in `config.yaml`
+(`anthropic_api_key`, `openai_api_key`, `openrouter_api_key`, `gemini_api_key`, `forge_api_key`).
+A CLI entry, for example:
+
+```yaml
+- agent_model_name: openpyxl_anthropic/claude-fable-5-1-max
+  model: claude-fable-5-1
+  reasoning_effort: max
+  thinking_budget_tokens: null
+  max_completion_tokens: 128000
+  base_url: https://api.anthropic.com
+  fresh_context_mode: true
+  enhanced_excel_context: true
+  recent_history_count: 3
+```
+
+Labels are append-only: a label's settings never change once attempts have been recorded under it,
+so a new configuration gets a new label.
+
 ## Grade attempts
 
 The judge reads every `outputs/attempts/**/task_attempts.jsonl`, stages each attempt with its
