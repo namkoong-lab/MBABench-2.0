@@ -5,7 +5,7 @@ and a starting workbook, and build a complete, working financial model in Excel.
 It has 101 tasks, four ways of running an agent on them, and an LLM judge that
 grades every attempt against a golden solution with a 132-check rubric.
 
-- **Tasks** are on Hugging Face: [namkoong-lab/MBABench](https://huggingface.co/datasets/namkoong-lab/MBABench)
+- **Tasks** are on Hugging Face: [namkoong-lab/MBABenchV2](https://huggingface.co/datasets/namkoong-lab/MBABench)
   (starting workbook, golden solution and metadata per task).
 - **Agents** reach a model through four surfaces: the vendors' chat products in a browser
   (`gui-agents/`), their add-ins inside Excel Online (`excel-agents/`), raw model APIs driving an
