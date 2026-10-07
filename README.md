@@ -203,7 +203,9 @@ uv run python judge/main_scripts/grade.py --attempt-ids <id> --regrade
 ```
 
 `--dry-run` lists what would be graded. `--all` grades every attempt that has no grading yet;
-`--regrade` grades again.
+`--regrade` grades again. `--workers N` grades N attempts at once (default 1, one after another);
+each worker is one judge conversation, LibreOffice steps stay serialised, and 4 is a sensible
+ceiling on a laptop.
 
 To grade one workbook outside the benchmark flow, assemble a folder with `ai_attempt.xlsx`,
 `solution/<golden>.xlsx` and optionally `starting/<workbook>.xlsx`, and run
