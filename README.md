@@ -102,8 +102,12 @@ uv run python -m infra.run -y        --run-config infra/configs/run_configs/clau
 workbook from OneDrive at `My files / mbabench_tasks / <task_name> / Task / <workbook>`, so the
 workbooks have to be there before the first run. Once:
 
-1. Launch the automation Chrome and sign in to Microsoft 365, with the add-in installed:
-   `scripts/setup_chrome.sh`
+1. Launch the automation Chrome and sign in to Microsoft 365: `scripts/setup_chrome.sh`.
+   Then install the add-in once on that account: open any workbook in Excel Online, click
+   **Add-ins** on the Home ribbon, then **More Add-ins**, search for `Claude` and add
+   **Claude by Anthropic for Excel** (or search `ChatGPT` and add OpenAI's **ChatGPT for
+   Excel**), open the panel and sign in to the vendor account. The engine only opens an
+   installed add-in; it does not install one.
 2. Build the folder tree locally. This writes `onedrive_staging/<task_name>/Task/<workbook>`
    for every task in `data/`, names taken from `task.json`:
    `uv run python scripts/provision_onedrive.py --stage`
