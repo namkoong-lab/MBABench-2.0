@@ -327,7 +327,8 @@
   cli: codex
   model: tensorblock/claude-fable-5-1
   effort: max
-  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false"]
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false",
+               "-c", \'model_catalog_json="/etc/codex/model_catalog.json"\']
   env:
     TRAJ_UPSTREAM: https://api.forge.tensorblock.co
     TRAJ_UPSTREAM_TIMEOUT: "600"
@@ -344,7 +345,8 @@
   cli: codex
   model: tensorblock/claude-opus-5
   effort: max
-  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false"]
+  extra_args: ["-c", 'web_search="disabled"', "-c", "features.multi_agent=false",
+               "-c", \'model_catalog_json="/etc/codex/model_catalog.json"\']
   env:
     TRAJ_UPSTREAM: https://api.forge.tensorblock.co
     TRAJ_UPSTREAM_TIMEOUT: "600"
