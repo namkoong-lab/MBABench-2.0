@@ -110,6 +110,27 @@ a browser. Each example config has a header comment on what to change.
 in the batch config. Coding: `--task-ids 1`. GUI and Excel: `--task-id 1`. Then grade it with
 `grade.py --all` (below) and look at `outputs/gradings/<id>/scores.json`.
 
+## Configure a run
+
+Two files decide what an attempt is. The **run config** you pass on the command line says which
+cohort runs, on which tasks, with which prompt and limits. The **identity registry** entry that
+the cohort label points to says which model, at which effort, over which route (next section). So
+to change the model or the effort you pick or add a registry label; everything else is in the run
+config. Each example config documents its keys in a header comment; the ones you are likely to touch:
+
+| pipeline | keys |
+|---|---|
+| CLI (`examples/*.yaml`) | `agent_model_name`; `task_ids: [...]` or `tasks: {first, last}` (omit = all); `prompt_version` (default `v16`, the leaderboard prompt); `max_iterations` (40 model calls per task); `api_timeout_seconds`; `skip_if_attempted` |
+| Coding (`run_configs/*.yaml`) | `agent_model_name`; `tasks: {first, last}`; `template_version` (default `v13`); `sandbox.image`; `--task-ids`, `--workers`, `--redo` on the command line |
+| GUI (`infra/configs/run_configs/*.yaml`) | `provider.kind` (`claude` or `chatgpt`) and the `claude_web` / `chatgpt_web` block (`mode`, `model`, `effort`, exactly as the product's UI names them); the label is derived from that block and must match a registered combination; `prompt_version` (205); `source.filters.task_ids` |
+| Excel (`infra/configs/run_configs/*.yaml`) | `agent_model_name`; `prompt_version` (205); `source.filters.task_ids`; per-task time caps under the add-in's block |
+| Judge (command line) | `--model` picks the grader label; `--workers`; see "Grade attempts" |
+
+Prompt versions are registered text: the CLI and coding pipelines keep theirs under
+`prompts/`, the GUI and Excel pipelines under `tasks_configs/prompts/`, each with a registry that
+maps the version number to the files sent. Every attempt row records the label and the prompt
+version it ran with, so results stay comparable.
+
 ## Models and routes
 
 A cohort label (`agent_model_name`) is an entry in the pipeline's identity registry, which pins
