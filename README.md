@@ -99,14 +99,19 @@ uv run python -m infra.run -y        --run-config infra/configs/run_configs/clau
 ```
 
 **Excel** — the Claude or ChatGPT add-in inside Excel Online. Once, launch the automation
-Chrome, sign in to Microsoft 365 with the add-in installed, and upload the task workbooks to
-OneDrive (`provision_onedrive.py` reads them from `data/`; try `--dry-run` first):
+Chrome, sign in to Microsoft 365 with the add-in installed, and put the task workbooks in
+OneDrive. The engine opens each workbook at `My files / mbabench_tasks / <task_name> / Task /
+<workbook>` (the base folder is `onedrive_base_path` in `infra/configs/configs.yaml`). The
+quickest way to build that tree is by hand: `--stage` writes it locally under
+`onedrive_staging/`, you drag the task folders into `mbabench_tasks` in OneDrive web in one go,
+and `--verify` walks the result. Without `--stage` the script uploads through the browser itself,
+which is slower and exposed to OneDrive's UI changes.
 
 ```bash
 cd excel-agents
 scripts/setup_chrome.sh
-uv run python scripts/provision_onedrive.py --dry-run
-uv run python scripts/provision_onedrive.py
+uv run python scripts/provision_onedrive.py --stage
+uv run python scripts/provision_onedrive.py --verify
 ```
 
 Then run:
@@ -204,6 +209,26 @@ task outside the pool). Results land in `<folder>/judge_results/`.
 A grading records a verdict per rubric check, a weighted score per category and a total out of
 100 (`scores.json`), the Questions-sheet answer check, the deterministic checks, and the judge's
 full conversation.
+
+## Troubleshooting
+
+- **Effort values are per model and per endpoint.** A registry entry pins an effort, but the
+  provider decides what it accepts, and the answer can differ between the chat and the Responses
+  endpoint or once tools are attached. The symptom is a bare 400 such as "provider rejected the
+  request". Probe the value with a one-line request before running a cohort, and read the
+  recorded upstream request in the attempt's `trajectory.jsonl.gz` to see exactly what was sent.
+  Codex only sends its file tools for models described in `coding-agents/docker/codex_model_catalog.json`;
+  a model without an entry falls back to a mode the relay cannot carry and the agent gives up at once.
+- **UI drift (GUI and Excel).** The vendors rename models and move controls. The engines match
+  the product's own labels (`claude_web.model`, `ui_model_label`, the model pill) and refuse to send
+  when the screen does not show what the identity claims, so a stuck run usually means the UI changed
+  or the account is at a usage cap or signed out. Probe the live UI, then add a registry entry with
+  the labels it shows now. `--dry-run` cannot catch any of this; watch the first task of a cohort.
+- **Judge.** LibreOffice must be on PATH or set as `libreoffice_path`. A workbook saved without
+  cached values (anything written by openpyxl) needs `--run-calculation`, or the judge refuses it as
+  ungraded formulas. A task outside the benchmark pool has no rubric-suitability annotation; grade it
+  with `JUDGE_SKIP_SUITABILITY=1`. Gradings skip attempts already graded by the same grader; pass
+  `--regrade` to grade again.
 
 ## Output layout
 
