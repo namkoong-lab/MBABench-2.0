@@ -3,7 +3,7 @@
 MBABench asks an AI agent to do what a junior analyst does: take a business case
 and a starting workbook, and build a complete, working financial model in Excel.
 It has 101 tasks, four ways of running an agent on them, and an LLM judge that
-grades every attempt against a golden solution with a 132-check rubric.
+grades every attempt against a golden solution with a 129-check rubric.
 
 - **Tasks** are on Hugging Face: [namkoong-lab/MBABench-2.0](https://huggingface.co/datasets/namkoong-lab/MBABench)
   (starting workbook, golden solution and metadata per task).
