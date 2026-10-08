@@ -28,7 +28,7 @@ recalculation). The coding pipeline needs Docker; the GUI and Excel pipelines ne
 and a paid account with the vendor.
 
 ```bash
-git clone https://github.com/namkoong-lab/MBABench && cd MBABench
+git clone https://github.com/namkoong-lab/MBABench-2.0 && cd MBABench-2.0
 ./setup.sh
 uv run python scripts/download_dataset.py
 ```
