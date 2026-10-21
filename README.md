@@ -10,8 +10,8 @@ grades every attempt against a golden solution with a 129-check rubric.
 - **Agents** reach a model through four surfaces: the vendors' chat products in a browser
   (`gui-agents/`), their add-ins inside Excel Online (`excel-agents/`), raw model APIs driving an
   Excel tool server (`cli-agents/`), and coding agents in a Docker sandbox (`coding-agents/`).
-- **Judge** (`judge/`): one LLM conversation per attempt plus deterministic Python checks for the
-  Questions-sheet answers and 20 formatting and structure checks.
+- **Judge** (`judge/`): one LLM conversation per attempt plus deterministic Python checks that
+  decide 20 rubric checks: the Questions-sheet answers and 19 formatting and structure checks.
 
 ```text
 data/            the downloaded tasks            (scripts/download_dataset.py)
