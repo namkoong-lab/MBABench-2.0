@@ -82,8 +82,16 @@ judge:
 #  - a native Anthropic path with prompt caching for Anthropic graders.
 # Bump version whenever prompt, evidence, rubric handling, deterministic
 # checks or scoring change.
+# v15 (2026-10-28, Patrick's v3 rulings): No formula errors (22) and
+# Negatives in parentheses (65) live; the new Automatic calculation mode
+# (100) check; Green font for cross-sheet links (50) now judges every
+# formula that reads another sheet and Black font (49) only same-sheet
+# formulas; Sufficient column widths (69) fails any clipped text; the
+# "undecided" outcome (a check that cannot settle THIS attempt in code hands
+# it to the LLM with an attempt-specific note). v14 gradings are never
+# re-scored.
 single_pass:
-  version: 14
+  version: 15
   prompt_template: "prompts/agentic_judge_template_8.yaml"
   prompt_version: "8"
   max_rounds: 500
@@ -105,28 +113,35 @@ single_pass:
 # detchecks key disagree refuses to grade. Only checks the task's
 # suitability annotation leaves applicable are graded (never a retired one).
 # No fallback: a check that cannot grade the file fails the grading before
-# the LLM call. No unresolved cell warnings (23) and Automatic calculation
-# mode (100) stay with the LLM (not built).
+# the LLM call. The one designed exception (judge v15): a live check may be
+# "undecided" for an attempt - No formula errors (22) when the only error
+# cells are ones LibreOffice cannot compute, Automatic calculation mode (100)
+# when a circular model with iteration on needs its disclosure read - and
+# then the LLM's verdict counts for that attempt, with the check's note in
+# its prompt (utils/det_checks.py). No unresolved cell warnings (23) stays
+# with the LLM (not built).
 det_checks:
   # true: every driver runs them (= --det-checks harness);
   # false: off unless --det-checks harness|llm is passed.
   enabled: true
-  # The Python verdict replaces the LLM's at scoring:
-  #   29 Clean Name Manager, 47 No bright-yellow highlighting,
-  #   49 Black font for calculations, 50 Green font for cross-sheet links,
-  #   51 Red font for external links, 61 Consistent zoom level,
-  #   62 Active cell reset to A1 on all sheets, 66 Zeros as dashes,
+  # The Python verdict replaces the LLM's at scoring (judge v15 list):
+  #   22 No formula errors, 29 Clean Name Manager,
+  #   47 No bright-yellow highlighting, 49 Black font for calculations,
+  #   50 Green font for cross-sheet links, 51 Red font for external links,
+  #   61 Consistent zoom level, 62 Active cell reset to A1 on all sheets,
+  #   65 Negatives in parentheses, 66 Zeros as dashes,
   #   69 Sufficient column widths, 70 Reasonable column widths,
   #   73 Reasonable row heights, 74 No merged cells,
   #   77 File extension (.xlsx), 80 Avoid volatile functions,
   #   87 Avoid whole-column references, 92 No hidden sheets,
   #   93 No hidden rows/columns, 94 No white-on-white hiding,
-  #   95 No external links
-  live: "29,47,49,50,51,61,62,66,69,70,73,74,77,80,87,92,93,94,95"
-  # Python runs and is recorded; the LLM's verdict counts
-  # (detchecks marks both Check.live = False, so neither can be listed live):
-  #   22 No formula errors, 65 Negatives in parentheses
-  recorded_only: "22,65"
+  #   95 No external links, 100 Automatic calculation mode
+  live: "22,29,47,49,50,51,61,62,65,66,69,70,73,74,77,80,87,92,93,94,95,100"
+  # Python runs and is recorded; the LLM's verdict counts. Empty since judge
+  # v15 (22 and 65 were here under v13/v14); a check listed here must not be
+  # listed live, and a check whose module says Check.live = False cannot be
+  # listed live.
+  recorded_only: ""
   # Formula values of a file not saved by Excel come from a LibreOffice
   # recalculation of the delivered file (paths.libreoffice_path; the copy
   # goes to <task folder>/det_checks_recalc/, deleted by the adapter as soon

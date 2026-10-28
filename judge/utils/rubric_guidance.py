@@ -51,6 +51,42 @@ class GuidanceError(Exception):
     """The guidance file does not match the rubric it annotates."""
 
 
+ATTEMPT_NOTE_LABEL = "Attempt-specific note (from the deterministic grader)"
+
+
+def with_attempt_notes(guidance: dict | None, notes: dict | None) -> dict | None:
+    """A copy of `guidance` with per-attempt notes appended under their checks (judge v15).
+
+    `notes` is {"<Category>/<check name>": text} - utils.det_checks.DetChecksRun.for_judge()
+    ["llm_notes"], one entry per deterministic check that is UNDECIDED for this attempt
+    (No formula errors (22): the LibreOffice gap cells; Automatic calculation mode (100): the
+    circular reference whose disclosure the LLM must find). The note is rendered as part of
+    that check's standard, after the static note when there is one, labelled
+    ATTEMPT_NOTE_LABEL so the judge knows it describes this workbook, not the rubric. No
+    other check changes: code-decided checks keep the LLM blind. Empty / None notes return
+    `guidance` itself. A key without "/" or an empty note raises GuidanceError.
+    """
+    if not notes:
+        return guidance
+    out = {"general": None, "categories": {}, "checks": {}} if guidance is None else {
+        "general": guidance.get("general"),
+        "categories": dict(guidance.get("categories") or {}),
+        "checks": dict(guidance.get("checks") or {}),
+    }
+    for key, note in notes.items():
+        cat, sep, name = str(key).partition("/")
+        text = str(note or "").strip()
+        if not sep or not cat or not name or not text:
+            raise GuidanceError(
+                f"attempt note for {key!r}: expected a '<Category>/<check name>' key "
+                f"and a non-empty note"
+            )
+        line = f"{ATTEMPT_NOTE_LABEL}: {text}"
+        base = out["checks"].get((cat, name))
+        out["checks"][(cat, name)] = f"{base}\n{line}" if base else line
+    return out
+
+
 def guidance_path_for(rubric_path) -> Path:
     """The guidance sibling for a rubric JSON (may not exist)."""
     p = Path(rubric_path)

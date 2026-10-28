@@ -686,7 +686,9 @@ def _apply_harness_verdicts(all_responses, harness_verdicts, weights_data):
     entries carry family "det_checks", live, check_no, n_mistakes, stats).
     A recorded-only deterministic verdict arrives as engine "llm" WITH a
     Python decision: it is recorded (decision, llm_decision, agreed) and
-    never overlaid.
+    never overlaid. So does an UNDECIDED one (judge v15: decision
+    "undecided", decided_by "llm"): the LLM's item stands for that attempt
+    and `agreed` is None, there being no Python decision to agree with.
     """
     import copy as _copy
 
@@ -719,16 +721,18 @@ def _apply_harness_verdicts(all_responses, harness_verdicts, weights_data):
                      "n_unlocated", "n_answered", "n_hardcoded", "n_unrounded",
                      "rounding_directive", "fraction_correct",
                      "rules_fired", "flags", "hardcoded_counts", "rules_version",
-                     # judge v13 deterministic checks (utils/det_checks.py)
-                     "family", "live", "check_no", "n_mistakes", "stats"):
+                     # judge v13 deterministic checks (utils/det_checks.py);
+                     # v15: decided_by ("code" | "llm")
+                     "family", "live", "check_no", "n_mistakes", "stats", "decided_by"):
             if stat in hv:
                 prov[stat] = hv[stat]
         # Agreement wherever the harness has a decision, overlaid or not
-        # (judge v13: recorded-only deterministic verdicts are compared too).
+        # (judge v13: recorded-only deterministic verdicts are compared too;
+        # v15: an undecided verdict is no decision, so agreed stays None).
         if hv.get("decision") is not None:
             prov["agreed"] = (
                 (llm_item or {}).get("decision") == hv.get("decision")
-                if llm_item else None
+                if llm_item and hv.get("decision") != "undecided" else None
             )
         if hv.get("engine") != "harness":
             provenance[key] = prov
@@ -2203,7 +2207,9 @@ def single_pass_judge_case(
     the deterministic checks the caller ran BEFORE this call; their verdicts
     are already in `harness_verdicts`. Passed through to _finalize_case
     (mode switch, scored_results.det_checks, det_checks.json). The LLM never
-    sees either.
+    sees a verdict; since judge v15 it is told, under that check alone, why a
+    check is undecided for this attempt (det_checks["llm_notes"], rendered by
+    rubric_guidance.with_attempt_notes) and its own verdict then counts there.
 
     Checks are globally numbered (the rubric's flattened order, the same
     1..132 numbering the suitability annotations validate against; gating
@@ -2250,6 +2256,17 @@ def single_pass_judge_case(
     versions = dict(prep["versions"])
 
     guidance = rubric_guidance.load_guidance(rubric_path)
+    # Judge v15: a deterministic check that is undecided for THIS attempt
+    # (utils/det_checks.py, det_checks["llm_notes"]) tells the judge why,
+    # under that one check; every code-decided check keeps the LLM blind.
+    prompt_guidance = rubric_guidance.with_attempt_notes(
+        guidance, (det_checks or {}).get("llm_notes")
+    )
+    if prompt_guidance is not guidance:
+        logger.info(
+            "  Attempt-specific notes for the judge (deterministic checks undecided): "
+            + ", ".join(sorted((det_checks or {}).get("llm_notes") or {}))
+        )
 
     logger.info("=" * 80)
     logger.info("Single-Pass Judge Evaluation Workflow")
@@ -2410,7 +2427,7 @@ def single_pass_judge_case(
     hardened = _prompt_version_at_least(versions["PROMPT_VERSION"], 8)
     rubric_checks_text = render_rubric_checks_flat(
         numbered_gated,
-        guidance,
+        prompt_guidance,
         guidance_style="standard" if hardened else "footnote",
         category_extras=(
             {"Accuracy": answer_rules.render_rules_text()} if hardened else None

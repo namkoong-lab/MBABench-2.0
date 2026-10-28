@@ -11,7 +11,9 @@ grades every attempt against a golden solution with a 129-check rubric.
   (`gui-agents/`), their add-ins inside Excel Online (`excel-agents/`), raw model APIs driving an
   Excel tool server (`cli-agents/`), and coding agents in a Docker sandbox (`coding-agents/`).
 - **Judge** (`judge/`): one LLM conversation per attempt plus deterministic Python checks that
-  decide 20 rubric checks: the Questions-sheet answers and 19 formatting and structure checks.
+  decide 23 rubric checks: the Questions-sheet answers and 22 formatting, structure and error
+  checks (judge v15). Two of those, No formula errors and Automatic calculation mode, may be
+  undecided for an attempt; the LLM then decides it, told why.
 
 ```text
 data/            the downloaded tasks            (scripts/download_dataset.py)
@@ -242,9 +244,12 @@ full conversation.
   the labels it shows now. `--dry-run` cannot catch any of this; watch the first task of a cohort.
 - **Judge.** LibreOffice must be on PATH or set as `libreoffice_path`. A workbook saved without
   cached values (anything written by openpyxl) needs `--run-calculation`, or the judge refuses it as
-  ungraded formulas. A task outside the benchmark pool has no rubric-suitability annotation; grade it
-  with `JUDGE_SKIP_SUITABILITY=1`. Gradings skip attempts already graded by the same grader; pass
-  `--regrade` to grade again.
+  ungraded formulas. The deterministic checks recalculate such workbooks through LibreOffice; the
+  list of Excel functions LibreOffice lacks (`judge/detchecks/core/recalc.py`) was verified against
+  LibreOffice 25.8.7 - re-run the probe described there after an upgrade, or cells it cannot
+  compute will be graded by the LLM (No formula errors) instead of by code. A task outside the
+  benchmark pool has no rubric-suitability annotation; grade it with `JUDGE_SKIP_SUITABILITY=1`.
+  Gradings skip attempts already graded by the same grader; pass `--regrade` to grade again.
 
 ## Output layout
 

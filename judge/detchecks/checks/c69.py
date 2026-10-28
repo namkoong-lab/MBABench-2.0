@@ -44,12 +44,14 @@ platform model by more than SURE_TOL_PX.  Excel then shows '####' whatever the v
     and rotated numbers are skipped (how Excel clips them is unverified; counted in stats).
     Booleans and errors are not values this check measures.
 
-CUT-OFF TEXT (Patrick 2026-10-04: long text anywhere in the workbook that cannot be fully seen fails;
-text running into empty neighbours and staying visible is fine).  Option 3 (Patrick, 2026-10-04): only
-a text showing at least TEXT_CLIP_MIN_CHARS (200) characters fails - shown_chars: its displayed text
-(after the number format) without leading / trailing blanks and without typed line breaks; a shorter
-cut-off text (a row label clipped by the next cell, ...) passes, as the toys and the judge guidance
-treat it, and is counted in stats (text_cut_off_short, wrapped_cut_off_short).  Displayed text =
+CUT-OFF TEXT (Patrick 2026-10-04: text anywhere in the workbook that cannot be fully seen fails;
+text running into empty neighbours and staying visible is fine).  Rule of 2026-10-28 (Patrick, judge
+v15): ANY clipped text fails, whatever its length - a row label cut off by the next cell as much as a
+200-character note.  (Under v13/v14 "option 3" of 2026-10-04 failed only a text showing 200+
+characters and counted shorter cut-off text in stats; that threshold is gone, with its counters.)
+Wrapped text cut off by a fixed row height counts as clipped and fails here too (Patrick 2026-10-28:
+no rubric item covers rows that are too short - Reasonable row heights (73) fails tall rows only -
+and the Good text "all values display fully" covers it).  Displayed text =
 constants (numbers stored as text included) and trusted text formula results, through the cell's
 number format (a text section can add to it or blank it).  Same models, glyph tables (characters
 outside them: accented letters as their base letter, East Asian wide characters 1 em, combining
@@ -141,8 +143,8 @@ HIDDEN_ANCHOR_SPAN = True         # a merge anchor in a hidden row / column is m
 # cut-off text (Patrick 2026-10-04; replaces the two narrow text rules TEXT_NUMBER_CLIP / TEXT_HIDDEN_COL_MAX_PX)
 TEXT_CLIP = True                  # (a) unwrapped text that cannot be fully seen (blocked overflow) fails
 WRAPPED_TEXT_CLIP = True          # (b) wrapped text needing more lines than its custom-height row shows fails
-TEXT_CLIP_MIN_CHARS = 200         # Patrick 2026-10-04 (option 3): (a) and (b) fail only for a text showing at least
-                                  # this many characters (shown_chars); shorter cut-off text is counted in stats only
+                                  # (no length threshold: Patrick 2026-10-28, any clipped text fails; the 200-character
+                                  # bar of 2026-10-04 is gone)
 WRAP_HIDDEN_LINES_TOL = 0.5       # (b) ... when more than this many lines are hidden (a line counts as shown
                                   #     when at least half of it is visible)
 WRAP_ALIGNMENTS = ("justify", "distributed")    # alignments Excel wraps like wrapText (as 73)
@@ -384,11 +386,11 @@ def _worst(d) -> float:
 
 
 def shown_chars(text: str) -> int:
-    """Characters a cut-off text shows, for TEXT_CLIP_MIN_CHARS: its displayed text (the value after the
-    cell's number format, e.g. with a text section's prefix / suffix), without leading / trailing blanks
-    (spaces, tabs, non-breaking spaces, line breaks) and without the typed line breaks inside it (an
-    unwrapped cell shows them as nothing, a wrapped one as a new line).  Every other character counts once,
-    blanks inside the text included."""
+    """Characters a cut-off text shows (quoted in the mistake: "about 2 of its 20 characters"): its
+    displayed text (the value after the cell's number format, e.g. with a text section's prefix / suffix),
+    without leading / trailing blanks (spaces, tabs, non-breaking spaces, line breaks) and without the typed
+    line breaks inside it (an unwrapped cell shows them as nothing, a wrapped one as a new line).  Every
+    other character counts once, blanks inside the text included."""
     return len(text.strip().replace("\r", "").replace("\n", ""))
 
 
@@ -541,11 +543,8 @@ class C69(Check):
                         "wrapped_text_cells": 0, "wrapped_auto_rows": 0, "wrapped_custom_rows": 0,
                         "wrapped_cut_off": 0, "wrapped_band": 0, "wrapped_merge_auto_rows": 0,
                         "wrapped_merged_in_auto_rows": 0, "text_hidden_anchor_cells": 0,
-                        "text_cut_off_short": 0, "wrapped_cut_off_short": 0, "text_runs_size_out_of_range": 0}
+                        "text_runs_size_out_of_range": 0}
         self.text_blockers = {}      # what stops graded cut-off text: value kinds, merge, sheet edge, own merge, fill
-        self.text_blockers_short = {}   # ... and cut-off text under TEXT_CLIP_MIN_CHARS (counted only)
-        self.text_short_examples = []
-        self.wrapped_short_examples = []
         self.text_unknown_faces = {}
         self.text_band_examples = []
         self.text_short_row_examples = []
@@ -729,7 +728,6 @@ class C69(Check):
         self._tcands = []            # [(r, c, s, text, segments, ext, kind, formula, lb, lbk, rb, rbk, sel_end)]
         self._wcands = []            # wrapped text in custom-height rows that may need more lines than shown
         self._wauto = []             # wrapped multi-line text in auto-fitted rows (merge anchors counted only)
-        self._sheet_short = [0, 0]   # cut-off texts under TEXT_CLIP_MIN_CHARS on this sheet: (a), (b)
 
     def row(self, row):
         self._flush_row()
@@ -1314,22 +1312,11 @@ class C69(Check):
             if ref["dl"] is not None and ref["dl"] > 0:
                 blockers.append(("left", why_l, self._blocker_phrase("left", why_l, r)))
             n = shown_chars(disp)
-            short = n < TEXT_CLIP_MIN_CHARS
-            counts = self.text_blockers_short if short else self.text_blockers
+            counts = self.text_blockers
             for _side, why, _phrase in blockers:
                 b = self._blocker_kind(why)
                 counts[b] = counts.get(b, 0) + 1
-            if short:
-                # cut off but shorter than TEXT_CLIP_MIN_CHARS: counted, not a mistake (Patrick, option 3)
-                tc["text_cut_off_short"] += 1
-                self._sheet_short[0] += 1
-                if len(self.text_short_examples) < MAX_TEXT_EXAMPLES:
-                    self.text_short_examples.append(
-                        {"cell": f"{self._sheet_name}!{make_ref(r, c)}", "text": self._snippet(disp), "chars": n,
-                         "blocked_by": [ph for _s, _w, ph in blockers],
-                         "overflow_px_by_model": {k: round(x, 1) for k, x in over.items()}})
-                return None
-            tc["text_cut_off"] += 1
+            tc["text_cut_off"] += 1          # any length (Patrick 2026-10-28)
             return {"r": r, "c": c, "s": s, "disp": disp, "segs": segs, "kind": kind, "formula": formula,
                     "over": over[REFERENCE_MODEL], "over_by_model": over, "ref": ref, "blockers": blockers,
                     "merge": merge, "chars": n}
@@ -1487,16 +1474,7 @@ class C69(Check):
         lo, hi = min(lines), max(lines)
         if lo - shown > WRAP_HIDDEN_LINES_TOL:
             n = shown_chars(text)
-            if n < TEXT_CLIP_MIN_CHARS:
-                # cut off but shorter than TEXT_CLIP_MIN_CHARS: counted, not a mistake (Patrick, option 3)
-                tc["wrapped_cut_off_short"] += 1
-                self._sheet_short[1] += 1
-                if len(self.wrapped_short_examples) < MAX_TEXT_EXAMPLES:
-                    self.wrapped_short_examples.append(
-                        {"cell": f"{self._sheet_name}!{make_ref(r, c)}", "text": self._snippet(text), "chars": n,
-                         "lines": lo, "rows_show": round(shown, 2)})
-                return None
-            tc["wrapped_cut_off"] += 1
+            tc["wrapped_cut_off"] += 1       # any length (Patrick 2026-10-28)
             return {"r": r, "c": c, "s": s, "text": text, "size": size, "line_pt": line_pt, "block": block,
                     "lines": lo, "lines_by_model": dict(zip((m.name for m in self.models), lines)),
                     "shown": shown, "merge": merge, "formula": formula, "width_px": px[REFERENCE_MODEL],
@@ -1635,7 +1613,7 @@ class C69(Check):
         hidden_anchors = self._hidden_anchors(merges)
         rec = {"sheet": name, "state": head.state, "cands": final, "uncertain": self._uncertain,
                "undecided": undecided, "counts": self._sheet_counts, "cf_second_pass": False,
-               "cf_undecided": [], "text_cut": text_cut, "wrap_cut": wrap_cut, "short": self._sheet_short}
+               "cf_undecided": [], "text_cut": text_cut, "wrap_cut": wrap_cut}
         self._sheets.append(rec)
         if rules or hidden_anchors:
             rec["rules"] = rules
@@ -1711,7 +1689,6 @@ class C69(Check):
         if self._p2 is not None:
             self.geo = self._p2["geo"]
             self._env = self._p2.get("env")
-            self._sheet_short = self._p2["short"]      # hidden text anchors count on their own sheet
             self._p2_anchor = {(m.r1, m.c1): m for m in self._p2["merges"]}
             self._p2_merges = self._p2["merges"]
 
@@ -1897,8 +1874,7 @@ class C69(Check):
                 blocks["wrapped_text"] += self._wrap_mistakes(name, hid, rec["wrap_cut"])
             per_sheet.append({"sheet": name, **rec["counts"], "undecided": len(rec["undecided"]) + len(rec["uncertain"])
                               + len(rec["cf_undecided"]), "cf_second_pass": rec["cf_second_pass"],
-                              "text_cut_off": len(rec["text_cut"]), "wrapped_text_cut_off": len(rec["wrap_cut"]),
-                              "text_cut_off_short": rec["short"][0], "wrapped_text_cut_off_short": rec["short"][1]})
+                              "text_cut_off": len(rec["text_cut"]), "wrapped_text_cut_off": len(rec["wrap_cut"])})
         self.counts["sure_overflows"] = n_sure
         for u in undecided:
             # Patrick 2026-10-05 (every attempt graded): an untrusted formula value is skipped, never raised
@@ -1918,9 +1894,6 @@ class C69(Check):
             "text_unknown_faces": self.text_unknown_faces,
             "mistakes_by_rule": blocks,
             "text_blockers": dict(sorted(self.text_blockers.items(), key=lambda kv: -kv[1])),
-            "text_blockers_short": dict(sorted(self.text_blockers_short.items(), key=lambda kv: -kv[1])),
-            "text_cut_off_short_examples": self.text_short_examples,
-            "wrapped_cut_off_short_examples": self.wrapped_short_examples,
             "text_band_examples": self.text_band_examples,
             "text_rows_under_half_line_examples": self.text_short_row_examples,
             "wrapped_merged_in_auto_rows_examples": self.wrapped_merged_auto_examples,
@@ -1939,7 +1912,7 @@ class C69(Check):
                         "untrusted_only_if_verdict_needs": UNTRUSTED_ONLY_IF_VERDICT_NEEDS,
                         "hidden_anchor_span": HIDDEN_ANCHOR_SPAN,
                         "text_clip": TEXT_CLIP, "wrapped_text_clip": WRAPPED_TEXT_CLIP,
-                        "text_clip_min_chars": TEXT_CLIP_MIN_CHARS, "max_font_pt": MAX_FONT_PT,
+                        "text_clip_min_chars": 0, "max_font_pt": MAX_FONT_PT,
                         "wrap_hidden_lines_tol": WRAP_HIDDEN_LINES_TOL, "line_height_per_pt": LINE_HEIGHT_PER_PT,
                         "merges_block_overflow": MERGES_BLOCK_OVERFLOW,
                         "hidden_cells_block_overflow": HIDDEN_CELLS_BLOCK_OVERFLOW,
@@ -1951,16 +1924,11 @@ class C69(Check):
         flagged = ", ".join(f"'{p['sheet']}'" for p in per_sheet
                             if p["sure_overflows"] or (TEXT_CLIP and p["text_cut_off"])
                             or (WRAPPED_TEXT_CLIP and p["wrapped_text_cut_off"]))
-        n_short = self.tcounts["text_cut_off_short"] + self.tcounts["wrapped_cut_off_short"]
-        short_note = (f" {n_short} cut-off text(s) shorter than {TEXT_CLIP_MIN_CHARS} characters are counted in stats "
-                      f"only." if n_short else "")
         return self.verdict(
-            f"No value is wider than its column and no long text is cut off: {self.counts['numeric_cells']} numeric "
+            f"No value is wider than its column and no text is cut off: {self.counts['numeric_cells']} numeric "
             f"cell(s) and {self.tcounts['text_cells']} text cell(s) on {len(self._sheets)} sheet(s); nothing displays "
-            f"'####' and no text of {TEXT_CLIP_MIN_CHARS} or more characters is cut off under every platform "
-            f"model.{short_note}",
-            f"{{n}} block(s) of values shown as '####' or text of {TEXT_CLIP_MIN_CHARS}+ characters cut off on: "
-            f"{flagged}.{und_note}",
+            f"'####' and no text (any length) is cut off under every platform model.",
+            f"{{n}} block(s) of values shown as '####' or text cut off on: {flagged}.{und_note}",
             stats)
 
     # ------------------------------------------------------------------ cut-off text: mistakes

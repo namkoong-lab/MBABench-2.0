@@ -1,12 +1,23 @@
 """Base class for deterministic checks + verdict helpers.
 
 Verdict contract (every check, every file):
-    {"engine": "harness", "decision": "pass" | "fail", "summary": str,
+    {"engine": "harness", "decision": "pass" | "fail" | "undecided", "summary": str,
      "mistakes": [{"location": str, "description": str, "severity": "major" | "minor"}],
-     "stats": {...}}
-Binary: pass <=> mistakes == [];  fail <=> at least one mistake.
+     "stats": {...}[, "llm_note": str]}
+Decided: pass <=> mistakes == [];  fail <=> at least one mistake.
 Mistake lists are capped (MAX_MISTAKES, default 25); the total count is always in
 stats["n_mistakes"] and in the summary.
+
+Undecided (judge v15, Patrick 2026-10-28): a check whose DESIGN names a case code cannot settle
+returns decision "undecided" for that file alone: no mistakes, a summary saying why,
+stats["undecided"] (the same why plus the check's details) and "llm_note" - what the LLM judge is
+told for this attempt (Check.undecided builds it; validate_verdict requires the note exactly when
+the decision is undecided).  The adapter (judge/utils/det_checks.py) then lets the LLM's verdict
+count for that attempt and hands the note to the prompt under that one check.  Only two checks use
+it: No formula errors (22) when the only error cells are LibreOffice gap cells, and Automatic
+calculation mode (100) when a circular model with iteration on needs its disclosure read.  It is
+not a fallback: a check that cannot grade a file (unreadable file, untrusted value it needs, bug)
+still raises GradingError.
 
 Hook order the engine guarantees (see detchecks/docs/reader.md):
     start(wb)
@@ -27,6 +38,7 @@ from ..errors import GradingError
 
 MAX_MISTAKES = 25
 SEVERITIES = ("major", "minor")
+DECISIONS = ("pass", "fail", "undecided")
 
 # Patrick 2026-10-05: "For production runs, every attempt must be graded."  Where a check used to raise
 # because it could not decide, it now decides by one of these fixed defaults and records every use in
@@ -99,6 +111,18 @@ def make_verdict(mistakes: Mistakes, summary: str, stats: Optional[dict] = None)
     return v
 
 
+def make_undecided(summary: str, llm_note: str, stats: Optional[dict] = None) -> dict:
+    """The undecided verdict (module doc): no mistakes, the note for the LLM judge."""
+    stats = dict(stats or {})
+    stats["n_mistakes"] = 0
+    stats["n_mistakes_listed"] = 0
+    stats["mistakes_truncated"] = False
+    v = {"engine": "harness", "decision": "undecided", "summary": summary, "mistakes": [], "stats": stats,
+         "llm_note": llm_note}
+    validate_verdict(v)
+    return v
+
+
 def validate_verdict(v) -> None:
     """Raise GradingError if a verdict breaks the contract."""
     if not isinstance(v, dict):
@@ -108,10 +132,16 @@ def validate_verdict(v) -> None:
         raise GradingError(f"verdict misses keys {sorted(missing)}")
     if v["engine"] != "harness":
         raise GradingError(f"verdict engine must be 'harness', got {v['engine']!r}")
-    if v["decision"] not in ("pass", "fail"):
-        raise GradingError(f"verdict decision must be pass/fail, got {v['decision']!r}")
+    if v["decision"] not in DECISIONS:
+        raise GradingError(f"verdict decision must be one of {DECISIONS}, got {v['decision']!r}")
     if not isinstance(v["summary"], str) or not v["summary"]:
         raise GradingError("verdict summary must be a non-empty string")
+    undecided = v["decision"] == "undecided"
+    note = v.get("llm_note")
+    if undecided and not (isinstance(note, str) and note.strip()):
+        raise GradingError("an undecided verdict must carry a non-empty llm_note for the LLM judge")
+    if not undecided and note is not None:
+        raise GradingError(f"only an undecided verdict carries llm_note (decision {v['decision']!r})")
     if not isinstance(v["stats"], dict):
         raise GradingError("verdict stats must be a dict")
     ms = v["mistakes"]
@@ -122,7 +152,9 @@ def validate_verdict(v) -> None:
                 or m["severity"] not in SEVERITIES or not isinstance(m["location"], str) \
                 or not isinstance(m["description"], str):
             raise GradingError(f"malformed mistake {m!r}")
-    if (v["decision"] == "pass") != (len(ms) == 0):
+    if undecided and ms:
+        raise GradingError(f"an undecided verdict carries no mistakes (got {len(ms)}): a mistake is a fail")
+    if not undecided and (v["decision"] == "pass") != (len(ms) == 0):
         raise GradingError(f"pass/fail invariant broken: decision={v['decision']} with {len(ms)} mistakes")
 
 
@@ -139,7 +171,8 @@ class Check:
     accepts_unparsed: bool = False  # True only for checks that grade non-SpreadsheetML files (77)
     max_mistakes: int = MAX_MISTAKES
     live: bool = True               # False: the verdict is recorded only; the LLM verdict stands at
-                                    # scoring (handoff ruling 2026-10-04; today only 65 is off)
+                                    # scoring (handoff ruling 2026-10-04; since judge v15 every
+                                    # registered check is live, the switch stays for the next one)
 
     def __init__(self):
         self.wb = None
@@ -247,14 +280,31 @@ class Check:
                                f"(source={cell.value_source}) but it is untrusted ({why})")
         return cell.value
 
-    def verdict(self, pass_summary: str, fail_summary: str, stats: Optional[dict] = None) -> dict:
-        """Build the verdict from self.mistakes.  The literal text '{n}' in fail_summary is
-        replaced by the total number of mistakes (plain replace, not str.format)."""
+    def _stats_with_defaults(self, stats: Optional[dict]) -> dict:
         st = dict(self.stats)
         st.update(stats or {})
         if self._defaults:
             st["defaults"] = {k: {"count": v["count"], "rule": v["rule"], "examples": list(v["examples"])}
                               for k, v in sorted(self._defaults.items())}
+        return st
+
+    def undecided(self, summary: str, llm_note: str, stats: Optional[dict] = None,
+                  details: Optional[dict] = None) -> dict:
+        """The undecided verdict for THIS file (module doc): `summary` says why code cannot decide,
+        `llm_note` is what the LLM judge is told for this attempt, `details` go into
+        stats["undecided"] beside the why.  A check that has recorded a mistake cannot be undecided
+        (a mistake is a fail): GradingError."""
+        if self.mistakes.total:
+            raise GradingError(f"{self.key}: undecided with {self.mistakes.total} mistake(s) recorded")
+        st = self._stats_with_defaults(stats)
+        st["undecided"] = {"why": summary, **(details or {})}
+        st["decided_by"] = "llm"
+        return make_undecided(summary, llm_note, st)
+
+    def verdict(self, pass_summary: str, fail_summary: str, stats: Optional[dict] = None) -> dict:
+        """Build the verdict from self.mistakes.  The literal text '{n}' in fail_summary is
+        replaced by the total number of mistakes (plain replace, not str.format)."""
+        st = self._stats_with_defaults(stats)
         if self.mistakes.total == 0:
             summary = pass_summary
         else:

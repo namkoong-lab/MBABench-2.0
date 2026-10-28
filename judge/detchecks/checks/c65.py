@@ -3,6 +3,11 @@
 Rule (rubric_9 #65: "Negative values use parentheses, e.g., (123)" / bad: "Negative values use a
 minus sign, e.g., -123"; Patrick 2026-10-03: graded in code, whole workbook).  Full write-up in
 docs/checks/65.md.
+LIVE since judge v15 (Patrick 2026-10-26: the new house rules, v3, say "zeros as dashes, negatives
+in parentheses"; built and toy-gated 2026-10-04, recorded only under v13/v14 because house rules
+v1 never asked for parentheses).  Whole workbook, the case's questions-and-answers sheet included
+(Patrick 2026-10-28: the house rules let agents edit the input tabs, so their formatting is the
+agent's too; the judge note that exempted that sheet was retired with this).
 
 Every cell that DISPLAYS a negative number must display it in parentheses.  A cell displays a
 negative number when it holds a numeric value <= NEG_THRESHOLD (-1e-6; constants and formula
@@ -412,8 +417,8 @@ class _Style:
 class C65(Check):
     number = 65
     key = "Formatting/Negatives in parentheses"
-    live = False                                  # Patrick 2026-10-04: built and toy-gated, OFF until v3 (the LLM
-                                                  # keeps grading it); the verdict is recorded only
+    live = True                                   # judge v15 (Patrick 2026-10-26, new house rules); recorded only
+                                                  # under v13/v14 (Patrick 2026-10-04: OFF until v3)
     needs_cells = True
     needs_rows = True                             # row default styles of array members missing from the file
     needs_values = True

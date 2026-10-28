@@ -138,6 +138,7 @@ class Engine:
                         self.plan = ensure_values(self.path, self.recalc.workdir, self.recalc, pkg=pkg)
                         pkg.provenance.value_kind = self.plan.source
                         pkg.provenance.recalc = self.plan.summary()
+                        pkg.provenance.gap_cells = self.plan.gap_cell_set()    # judge v15: No formula errors (22)
                         value_source = self.plan.value_source()
                         if value_source is not None:
                             pkg.provenance.value_path = value_source.path

@@ -102,26 +102,30 @@ checks:
   - category: Formatting
     name: Black font for calculations
     note: |
-      Green is acceptable only when the formula itself references another
-      sheet, with a sheet name before "!". Read the formula before excusing
-      green: a same-sheet calculation in green, or any colour other than
-      black, is a mistake. For a spilled range, the top cell's formula
-      decides the kind of every cell in the spill.
+      This check covers formulas that reference no other sheet: a formula
+      whose every reference is on its own sheet, or that has no reference
+      at all. Those must be black; a same-sheet calculation in green, or in
+      any colour other than black, is a mistake. A formula that references
+      another sheet anywhere (a sheet name before "!", a defined name or
+      table on another sheet), whether a pure link or part of a calculation,
+      is NOT judged here: Green font for cross-sheet links covers it, so do
+      not fail this check for it. For a spilled range, the top cell's
+      formula decides the kind of every cell in the spill. HYPERLINK
+      navigation cells may be any colour.
 
   - category: Formatting
     name: Green font for cross-sheet links
     note: |
-      Determine the model's own convention from the majority of its
-      cross-sheet links. Where most cross-sheet links are green, a block of
-      cross-sheet links in black is an inconsistency: fail and cite the
-      range. Where black is the model's convention for cross-sheet links, or
-      the model uses no green at all, do not deduct; black is a sanctioned
-      calculation colour. Never fail a model solely for lacking green.
-      Keep this check in step with Consistent color coding: when you cite
-      black cross-sheet cells there in a model whose convention is green,
-      those same cells are cross-sheet links that are not green, so this
-      check fails on the same range. Do not pass one and fail the other on
-      the same cells.
+      Every formula that references another sheet of this workbook must be
+      green: a pure link (=Inputs!B5) as much as a calculation that uses
+      another sheet's cells (=Inputs!B5*C3, =SUM(Inputs!A1:A9), a defined
+      name or table that lives on another sheet). There is no convention
+      vote: one black cross-sheet formula is a mistake, cite the range.
+      Formulas that reference no other sheet are judged by Black font for
+      calculations, not here; formulas that read another workbook by Red
+      font for external links. For a spilled range, the top cell's formula
+      decides the kind of every cell in the spill. HYPERLINK navigation
+      cells may be any colour.
 
   # ---------------------------------------------------------------------
   # Repeat-grading stability notes (maintainer, 2026-09-02). Added after grading
@@ -134,6 +138,20 @@ checks:
   # converts a two-way-readable check into a decision rule with a required
   # citation, so a fail has to name the cell or formula that earns it.
   # ---------------------------------------------------------------------
+
+  - category: Potential Dangers
+    name: Automatic calculation mode
+    note: |
+      When an attempt-specific note under this check lists a circular
+      reference found by the deterministic grader, the calculation mode is
+      automatic and iterative calculation is on; the only question left is
+      disclosure. Pass only if the workbook states, on the cover, in notes,
+      a legend or cell comments, that the model is intentionally circular,
+      where the circularity is, and that iterative calculation is required.
+      A breaker switch alone is not a statement. Without such a note, grade
+      as usual: manual calculation mode fails, a circular reference with
+      iterative calculation off fails, a workbook without circularity passes
+      whether or not iteration is enabled.
 
   - category: Potential Dangers
     name: No errors under extreme-but-plausible inputs
@@ -405,9 +423,11 @@ checks:
   - category: Formatting
     name: Negatives in parentheses
     note: |
-      The case's questions-and-answers sheet has its layout and cell
-      formatting set by the case; its formatting is not judged here.
-      Identify that sheet by its role, not its name.
+      Every sheet counts, the case's questions-and-answers sheet included:
+      the house standards let the agent edit the input tabs, so their
+      formatting is the agent's too. A negative shown with a minus sign, or
+      with no sign, anywhere in the workbook is a mistake; a negative that
+      rounds to zero on display is not.
 
   - category: Formatting
     name: Zeros as dashes
@@ -614,14 +634,14 @@ checks:
   - category: Formatting
     name: Sufficient column widths
     note: |
-      Judge this on values that cannot be read: numeric cells the
+      Judge this on values that cannot be read in full: numeric cells the
       properties summary lists as "NUMERIC exceeds width (would render
-      ###)", and any value hidden by its column. A text label that runs a
-      few characters past its column is ordinary formatting practice and
-      is NOT a mistake on this check; do not infer truncation from column
-      widths or label lengths. When the summary reports that no numeric
-      value exceeds its column width and no hidden value is found, the
-      check passes.
+      ###)", and any text that is clipped, whatever its length - a label
+      cut off by a filled neighbouring cell, or wrapped text that a fixed
+      row height cuts off at the bottom, is a mistake. Text that runs past
+      its own cell into EMPTY neighbours and stays fully visible is fine.
+      Do not infer truncation from column widths or label lengths alone:
+      what matters is whether the whole value can be seen.
 
   - category: Structure
     name: Functional calculation sections
@@ -645,6 +665,14 @@ checks:
       (formulas that reference them display #VALUE! as well). A formula that
       is NOT listed is never an implicit-intersection error, whatever its
       shape; do not infer one from formula text.
+      The served values of a workbook not saved by Excel come from a
+      LibreOffice recalculation, which lacks some Excel functions (LAMBDA,
+      MAP, SCAN, the CUBE functions, ...). Cells that show #NAME? or #VALUE!
+      only for that reason are listed in an attempt-specific note under this
+      check when, and only when, the deterministic grader could not decide
+      the attempt by code; that note names each such cell and its formula.
+      Judge those cells on whether the formula is valid Excel, not on the
+      displayed error. Without such a note, a served error value is an error.
 
   - category: Formatting
     name: Input cells data validation

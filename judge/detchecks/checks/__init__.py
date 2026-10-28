@@ -28,8 +28,10 @@ from .c92 import C92
 from .c93 import C93
 from .c94 import C94
 from .c95 import C95
+from .c100 import C100
 
-_CLASSES = (C22, C29, C47, C49, C50, C51, C61, C62, C65, C66, C69, C70, C73, C74, C77, C80, C87, C92, C93, C94, C95)
+_CLASSES = (C22, C29, C47, C49, C50, C51, C61, C62, C65, C66, C69, C70, C73, C74, C77, C80, C87, C92, C93, C94, C95,
+            C100)
 
 REGISTRY: dict[int, type] = {c.number: c for c in _CLASSES}
 BY_KEY: dict[str, type] = {c.key: c for c in _CLASSES}
@@ -37,7 +39,8 @@ BY_KEY: dict[str, type] = {c.key: c for c in _CLASSES}
 
 def live_numbers() -> list[int]:
     """Checks whose Python verdict counts at scoring (Check.live).  The others still run and
-    record a verdict marked "live": false (handoff ruling 2026-10-04; today only 65 is off)."""
+    record a verdict marked "live": false (handoff ruling 2026-10-04; since judge v15 every
+    registered check is live)."""
     return sorted(n for n, c in REGISTRY.items() if getattr(c, "live", True))
 
 
