@@ -118,10 +118,11 @@ NATIVE_WRITE_TIMEOUT_S = 120.0
 
 
 def native_anthropic_timeout():
-    """httpx.Timeout for the native client (connect / read / write / pool)."""
-    import httpx
+    """Timeout for the native client (connect / read / write / pool), built with the SDK's own
+    Timeout type: anthropic >= 1.x runs on httpx2 and rejects an httpx.Timeout."""
+    import anthropic
 
-    return httpx.Timeout(
+    return anthropic.Timeout(
         connect=NATIVE_CONNECT_TIMEOUT_S,
         read=NATIVE_READ_TIMEOUT_S,
         write=NATIVE_WRITE_TIMEOUT_S,

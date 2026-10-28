@@ -1,4 +1,4 @@
-"""Deterministic rubric checks in the judge (judge v13).
+"""Deterministic rubric checks in the judge (judge v13; the undecided outcome since v15).
 
 `detchecks` (judge/detchecks/, API in detchecks/docs/reader.md) grades rubric_9 checks in
 Python from the DELIVERED workbook. This module is the only place the judge calls it:
@@ -20,13 +20,25 @@ What runs
 
 Representation (the judge's harness_verdicts format, key "<Category>/<check name>")
   live           engine "harness", decision, summary, mistakes, fallback_reason None,
-                 family "det_checks", live True, check_no, n_mistakes, stats
-  recorded only  the same with engine "llm", live False and fallback_reason = detchecks'
-                 LIVE_NOTE ("recorded only; the LLM verdict stands at scoring")
+                 family "det_checks", live True, check_no, n_mistakes, stats, decided_by "code"
+  recorded only  the same with engine "llm", live False, decided_by "llm" and fallback_reason =
+                 detchecks' LIVE_NOTE ("recorded only; the LLM verdict stands at scoring")
+  undecided      (judge v15, Patrick 2026-10-28) a check whose design names a case code cannot
+                 settle returned decision "undecided" for THIS attempt (detchecks/checks/base.py:
+                 no mistakes, stats["undecided"], an llm_note): engine "llm", live as configured,
+                 decision "undecided", decided_by "llm", fallback_reason "undecided: <summary>",
+                 llm_note. The LLM's verdict counts for that attempt, and for a LIVE check the
+                 note reaches the judge prompt under that one check (DetChecksRun.for_judge()
+                 ["llm_notes"] -> rubric_guidance.with_attempt_notes in single_pass_judge_case);
+                 code-decided checks keep the LLM blind. Today: No formula errors (22) when the
+                 only error cells are LibreOffice gap cells, Automatic calculation mode (100)
+                 when a circular model with iteration on needs its disclosure read.
   `engine` keeps its one meaning for every reader: "harness" = this verdict may replace the
   LLM's; "llm" = the LLM's verdict stands (here with the Python decision recorded beside it).
-  judge._apply_harness_verdicts records decision, llm_decision and `agreed` for both kinds and
-  overlays engine "harness" entries only.
+  `decided_by` ("code" | "llm") says whose verdict counts, so the share of code-decided attempts
+  can be reported per check; judge._apply_harness_verdicts records decision, llm_decision and
+  `agreed` (None when Python was undecided) for every kind and overlays engine "harness"
+  entries only.
 
 The switch (--det-checks on every driver; default from det_checks.enabled: true -> harness)
   harness  live Python verdicts count in the recorded total (judge v13 default)
@@ -182,6 +194,7 @@ DET_CHECK_NAMES = {
     93: ("Potential Dangers", "No hidden rows/columns"),
     94: ("Potential Dangers", "No white-on-white hiding"),
     95: ("Potential Dangers", "No external links"),
+    100: ("Potential Dangers", "Automatic calculation mode"),     # judge v15
 }
 _NUMBER_BY_KEY = {f"{cat}/{name}": no for no, (cat, name) in DET_CHECK_NAMES.items()}
 _FILE_EXTENSION_CHECK = 77
@@ -248,11 +261,15 @@ class DetChecksRun:
     artefact_path: Path | None = None
 
     def for_judge(self) -> dict:
-        """The `det_checks` argument of judge.single_pass_judge_case / _finalize_case."""
+        """The `det_checks` argument of judge.single_pass_judge_case / _finalize_case.
+        `llm_notes` (judge v15): {rubric key: note} for the LIVE checks that are undecided for
+        this attempt - what the judge is told under that check (module doc); empty otherwise."""
         return {
             "mode": self.mode,
             "summary": self.summary,
             "artefact": str(self.artefact_path) if self.artefact_path else None,
+            "llm_notes": {k: e["llm_note"] for k, e in (self.harness_verdicts or {}).items()
+                          if e.get("decision") == "undecided" and e.get("live") and e.get("llm_note")},
         }
 
 
@@ -564,6 +581,7 @@ def code_sha() -> str:
 # values block.
 DB_LIST_CAP = 10
 DB_SUMMARY_CAP = 300
+DB_NOTE_CAP = 1500        # an undecided check's llm_note in the compact block (the full text is in det_checks.json)
 VALUES_REF = "det_checks.values"
 
 
@@ -1112,21 +1130,31 @@ def _run_det_checks(task_folder: Path, artefact: Path, rubric_path, weights_path
         live = plan[no] and bool(v.get("live", True))
         stats = all_stats[no]
         mistakes = json_safe(list(v.get("mistakes") or []))
+        undecided = v["decision"] == "undecided"          # judge v15 (module doc)
+        counts = live and not undecided
+        summary = str(v.get("summary") or "")
         entry = {
-            "engine": "harness" if live else "llm",
+            "engine": "harness" if counts else "llm",
             "decision": v["decision"],
-            "summary": str(v.get("summary") or ""),
+            "summary": summary,
             "mistakes": mistakes,
-            "fallback_reason": None if live else (v.get("live_note") or det_api.LIVE_NOTE),
+            "fallback_reason": (None if counts else f"undecided: {summary}" if undecided
+                                else (v.get("live_note") or det_api.LIVE_NOTE)),
             "family": FAMILY,
             "live": live,
             "check_no": no,
+            "decided_by": "code" if counts else "llm",
             "n_mistakes": stats.get("n_mistakes", len(mistakes)),
             "stats": _db_stats(stats, values),
         }
+        if undecided:
+            entry["llm_note"] = str(v.get("llm_note") or "")
         harness_verdicts[key] = entry
         checks_block[key] = {"check_no": no, "engine": entry["engine"], "decision": entry["decision"],
-                             "live": live, "n_mistakes": entry["n_mistakes"], "summary": _short(entry["summary"])}
+                             "live": live, "decided_by": entry["decided_by"], "n_mistakes": entry["n_mistakes"],
+                             "summary": _short(summary)}
+        if undecided:
+            checks_block[key]["llm_note"] = _short(entry["llm_note"], DB_NOTE_CAP)
 
     seconds = round(time.perf_counter() - t0, 3)
     record.update(status="ok", seconds=seconds, values=values, verdicts=verdicts)
@@ -1141,8 +1169,10 @@ def _run_det_checks(task_folder: Path, artefact: Path, rubric_path, weights_path
     summary = json_safe(summary)
     fails = [label(e["check_no"]) + ("" if e["live"] else " [recorded only]")
              for e in harness_verdicts.values() if e["decision"] == "fail"]
+    undecided = [label(e["check_no"]) for e in harness_verdicts.values() if e["decision"] == "undecided"]
     graded_on = " on LibreOffice's .xlsx conversion of the delivered .xls" if (xls_block or {}).get("converted") else ""
     logger.info(f"  [det_checks] {len(selected)} graded{graded_on} in {seconds:.1f} s "
                 f"(values: {(values or {}).get('source') or 'not needed'}); "
-                f"fail: {fails or 'none'}")
+                f"fail: {fails or 'none'}"
+                + (f"; undecided (the LLM decides, told why): {undecided}" if undecided else ""))
     return DetChecksRun(mode, harness_verdicts, summary, artefact)

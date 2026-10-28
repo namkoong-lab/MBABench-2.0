@@ -70,13 +70,19 @@ class Provenance:
     value_sheets: list = field(default_factory=list)   # sheet names present in the copy
     value_kind: Optional[str] = None   # recalc pipeline: 'cache' | 'libreoffice' | 'excel' (None: manual value_path / none)
     recalc: Optional[dict] = None      # recalc pipeline summary (core/recalc.py ValuePlan.summary())
+    # judge v15: the FULL set of LibreOffice gap cells {(sheet, row, col)} (core/recalc.py ValuePlan.gap_cells:
+    # formula cells whose LibreOffice value is #NAME? / #VALUE! although Excel would compute them; an array /
+    # spill range is keyed by its anchor).  Empty for an Excel-saved file or an Excel copy (no gaps by
+    # definition); None when no pipeline ran (manual value_path, or no values needed).
+    gap_cells: Optional[frozenset] = None
 
     def as_dict(self) -> dict:
         return {"writer": self.writer, "evidence": self.evidence,
                 "formula_caches_trusted": self.formula_caches_trusted,
                 "full_calc_on_load": self.full_calc_on_load, "application": self.application,
                 "value_path": self.value_path, "value_writer": self.value_writer,
-                "value_kind": self.value_kind, "recalc": self.recalc}
+                "value_kind": self.value_kind, "recalc": self.recalc,
+                "n_gap_cells": None if self.gap_cells is None else len(self.gap_cells)}
 
 
 _DECL = re.compile(rb"^\s*<\?xml\s([^?]*)\?>")

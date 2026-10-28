@@ -20,6 +20,20 @@ What counts:
     / LibreOffice show a number.  Detected with judge/utils/implicit_intersection.py (read-only
     import; only what that detector flags is flagged), on every plain formula, whatever the
     value source (an Excel cache can be stale: T5 has fullCalcOnLoad).
+LibreOffice gap cells (judge v15, Patrick 2026-10-28; LIVE since v15, recorded only under v13/v14
+because of exactly this): with Excel recalculation OFF, a cell LibreOffice cannot compute (a
+function it lacks - LAMBDA, MAP, the CUBE functions ... -, a spill reference, an array-evaluation
+difference; core/recalc.py classify_lo_error, the full set in wb.provenance.gap_cells) shows #NAME?
+/ #VALUE! in the copy although Excel computes it.  Per attempt:
+  * any error in a NON-gap cell (a typed error constant, an implicit intersection, a genuine
+    LibreOffice error such as a misspelled or unprefixed function, an Excel-cached error) -> FAIL,
+    decided by code; gap cells are listed in stats beside it, never as mistakes;
+  * no error cell at all -> PASS, decided by code;
+  * the only cells showing errors are gap cells -> UNDECIDED (base.py): the LLM judge decides this
+    attempt, told in llm_note which cells are gaps and why (sheet!ref, the formula, the function
+    LibreOffice lacks) and that every other cell was checked by code and is error-free.
+  A file saved by Excel, or one recalculated by Excel (RecalcPolicy.excel_allowed, kept built and
+  OFF), has no gap cells, so code always decides it.
 What does not count:
   * errors caught by IFERROR / IFNA / ISERROR ... (the cell displays the fallback, not an error);
   * text that merely reads "#N/A" (a string cell or a formula's string result);
@@ -39,7 +53,7 @@ from collections import defaultdict
 from typing import Optional
 
 from ..core import formula as F
-from ..core.refs import col_to_index, location, make_ref
+from ..core.refs import col_to_index, location, make_ref, split_ref
 from ..core.sheet import ExcelError
 from ..errors import GradingError
 from .base import Check
@@ -47,6 +61,8 @@ from .base import Check
 II_PATH = os.environ.get("DETCHECKS_II_PATH") or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "utils", "implicit_intersection.py")
 MAX_EXAMPLES = 8
 FORMULA_SNIPPET = 90
+MAX_GAP_CELLS_IN_NOTE = 40      # gap cells quoted in the llm_note (the rest are counted)
+GAP_NOTE_SNIPPET = 120          # characters of a gap cell's formula quoted in the note
 
 # Excel rich-value error types (xl/richData/rdrichvalue.xml _error structure, key errorType)
 RICH_ERROR_TYPES = {0: "#NULL!", 1: "#DIV/0!", 2: "#VALUE!", 3: "#REF!", 4: "#NAME?", 5: "#NUM!", 6: "#N/A",
@@ -179,8 +195,8 @@ def rich_error_map(pkg) -> dict:
 class C22(Check):
     number = 22
     key = "Error Checks/No formula errors"
-    live = False                                  # Patrick 2026-10-04: stays with the LLM judge as in judge v12 while he
-                                                  # decides on recalculation; built and toy-gated, verdict recorded only
+    live = True                                   # judge v15 (Patrick 2026-10-28: gap cells -> undecided, module doc);
+                                                  # recorded only under v13/v14 (Patrick 2026-10-04)
     needs_cells = True
     needs_values = True
     sheet_kinds = ("worksheet", "dialogsheet", "macrosheet")
@@ -199,6 +215,32 @@ class C22(Check):
         self.hidden_sheets: list = []
         self.examples: list = []
         self.sheets_with_errors: list = []
+        # judge v15: LibreOffice gap cells (module doc); None = no pipeline ran (no gap information)
+        prov = getattr(wb, "provenance", None)
+        self._gaps = getattr(prov, "gap_cells", None) if prov is not None else None
+        self._lo_version = ((prov.recalc or {}).get("lo_version") if prov is not None and prov.recalc else None)
+        self.n_gap_error_cells = 0
+        self.gap_cells: list = []                 # [(sheet, ref, lo value, formula text, what LibreOffice lacks)]
+        self.gap_sheets: list = []
+
+    def _is_gap(self, cell) -> bool:
+        g = self._gaps
+        if not g:
+            return False
+        if (cell.sheet, cell.row, cell.col) in g:
+            return True
+        if cell.array is not None:                # a member of an array / spill range: the gap is keyed by its anchor
+            rc = split_ref(cell.array.anchor_ref)
+            return rc is not None and (cell.sheet, rc[0], rc[1]) in g
+        return False
+
+    def _gap_what(self, cell) -> str:
+        g = self._gaps or {}
+        what = g.get((cell.sheet, cell.row, cell.col))
+        if what is None and cell.array is not None:
+            rc = split_ref(cell.array.anchor_ref)
+            what = g.get((cell.sheet, rc[0], rc[1])) if rc is not None else None
+        return what or "a function LibreOffice lacks"
 
     def _rich_name(self, vm: int) -> str:
         if self._rich is None:
@@ -240,6 +282,14 @@ class C22(Check):
                 code = str(v)
                 if code == "#VALUE!" and cell.vm is not None and cell.value_source == "cached":
                     code = self._rich_name(cell.vm)
+                if cell.value_source == "recalc" and self._is_gap(cell):
+                    # judge v15: LibreOffice cannot compute this cell; Excel may well (module doc)
+                    self.n_gap_error_cells += 1
+                    if len(self.gap_cells) < MAX_GAP_CELLS_IN_NOTE:
+                        self.gap_cells.append((cell.sheet, cell.ref, code, text or "", self._gap_what(cell)))
+                    if not self.gap_sheets or self.gap_sheets[-1] != cell.sheet:
+                        self.gap_sheets.append(cell.sheet)
+                    return
                 self._record(cell, code, "formula", text)
                 return
             # implicit intersection: plain formulas only (array / data-table formulas and spill
@@ -284,14 +334,47 @@ class C22(Check):
             self.hidden_sheets.append(head.name)
         self.hits = defaultdict(list)
 
+    def _gap_note(self) -> str:
+        """What the LLM judge is told when only gap cells show errors (module doc)."""
+        m = re.search(r"LibreOffice(?:Dev)?[/ ](\d+(?:\.\d+)*)", self._lo_version or "")
+        engine = f"LibreOffice {m.group(1)}" if m else "LibreOffice"
+        lines = [f"{location(s, r)} shows {code} = {('=' + f[:GAP_NOTE_SNIPPET]) if f else '(array member)'}"
+                 f"  [{what}]" for s, r, code, f, what in self.gap_cells]
+        more = self.n_gap_error_cells - len(self.gap_cells)
+        if more > 0:
+            lines.append(f"... and {more} more such cell(s) (sheets: {', '.join(self.gap_sheets)})")
+        return (f"The deterministic grader could not decide this check by code. {self.n_gap_error_cells} cell(s) "
+                f"show #NAME?/#VALUE! only because the recalculation engine ({engine}) lacks the function or "
+                f"feature named in brackets; Excel computes them. Judge whether each of these formulas is valid "
+                f"Excel (spelling, argument count, references), not the displayed error:\n"
+                + "\n".join(lines)
+                + "\nEvery other cell of the workbook has been checked by code and is error-free.")
+
     def finish(self) -> dict:
         stats = {"formula_cells": self.n_formula, "formula_values_read": self.n_values_read,
                  "error_cells": self.n_error_cells, "error_cells_by_code": dict(sorted(self.by_code.items())),
                  "typed_error_constants": self.n_constant_errors,
                  "implicit_intersection_cells": self.n_ii, "implicit_intersection_checked": self.n_ii_checked,
                  "sheets_with_errors": self.sheets_with_errors, "hidden_sheets_with_errors": self.hidden_sheets,
-                 "examples": self.examples}
+                 "examples": self.examples,
+                 # judge v15: LibreOffice gap cells showing an error (never a mistake; module doc)
+                 "gap_error_cells": self.n_gap_error_cells,
+                 "gap_error_examples": [f"{location(s, r)} {code}" + (f": ={f[:FORMULA_SNIPPET]}" if f else "")
+                                        + f" [{what}]" for s, r, code, f, what in self.gap_cells[:MAX_EXAMPLES]],
+                 "gap_sheets": self.gap_sheets,
+                 "gap_information": "none" if self._gaps is None else "pipeline"}
+        if self.mistakes.total == 0 and self.n_gap_error_cells:
+            return self.undecided(
+                f"Only LibreOffice gap cells show errors ({self.n_gap_error_cells} cell(s) LibreOffice cannot "
+                f"compute; every other one of the {self.n_formula} formula cells is error-free): the LLM judge "
+                f"decides this attempt, told which cells are gaps.",
+                self._gap_note(), stats,
+                details={"gap_error_cells": self.n_gap_error_cells, "gap_sheets": self.gap_sheets,
+                         "decided_by": "llm"})
+        stats["decided_by"] = "code"
+        gap_note = (f" {self.n_gap_error_cells} LibreOffice gap cell(s) show errors Excel would not (not counted)."
+                    if self.n_gap_error_cells else "")
         return self.verdict(f"No cell displays an Excel error value ({self.n_formula} formula cells checked).",
                             "{n} block(s) of cells display Excel error values "
                             f"({self.n_error_cells} cell(s): " +
-                            ", ".join(f"{k} x{v}" for k, v in sorted(self.by_code.items())) + ").", stats)
+                            ", ".join(f"{k} x{v}" for k, v in sorted(self.by_code.items())) + f").{gap_note}", stats)

@@ -1,6 +1,7 @@
 """Shared rules for the font-colour checks 49 / 50 / 51 (group "colours").
 
-Patrick's confirmed colour rule (handoff, 2026-10-02).  Every formula cell is put in one class:
+Patrick's confirmed colour rule (handoff, 2026-10-02; CROSS re-ruled 2026-10-26 for judge v15).
+Every formula cell is put in one class:
 
     EXTERNAL  reads another WORKBOOK anywhere in the formula (directly, through a defined
               name, or through a literal INDIRECT("'[Book.xlsx]S'!A1"))       -> red    (51)
@@ -9,13 +10,17 @@ Patrick's confirmed colour rule (handoff, 2026-10-02).  Every formula cell is pu
               =Inputs!B5#, =@Inputs!B5:B9, =ANCHORARRAY(Inputs!B5), =TOROW(Inputs!B5:B9), a
               defined name / table that resolves to another sheet)            -> green  (50)
     CROSS     otherwise, the formula calculates with another sheet's cells
-              (=Inputs!B5*C3, =SUM(Inputs!A1:A9), =WACC*B2 with WACC on Inputs) -> black or green
+              (=Inputs!B5*C3, =SUM(Inputs!A1:A9), =WACC*B2 with WACC on Inputs) -> green  (50)
     OWN       otherwise: uses only its own sheet (incl. self-qualified 'Own'!A1), or no
               reference at all (=5, =TODAY(), ="text")                         -> black  (49)
 
-Each class is judged by exactly one check (confirmed rule applied fully, Patrick 2026-10-03):
-49 judges OWN (black) and CROSS (black or green); 50 judges POINTER (green); 51 judges
-EXTERNAL (red).  A blue pointer therefore fails 50 only, a blue external link 51 only.
+Each class is judged by exactly one check.  Patrick 2026-10-26 (new house rules, v3: "black:
+formulas; green: links to another sheet/tab, also when used inside formulas"): 49 judges OWN
+(black); 50 judges POINTER and CROSS (green); 51 judges EXTERNAL (red).  A black cross-sheet
+calculation therefore fails 50 only, a blue pointer 50 only, a blue external link 51 only, a
+green own-sheet formula 49 only - every formula is charged once.  (Under v13/v14, ruling
+2026-10-03, 49 judged CROSS as "black or green" and 50 judged pointers alone.)  The four
+classes stay: the stats report them, and a cell's charge follows its class.
 
 The colour that counts is the cell's FONT colour (cellXfs -> fonts -> color, resolved with
 the workbook's theme / indexed palette / tint by detchecks.core.styles).  Number-format colour
@@ -51,12 +56,15 @@ when (and only when) that decides a green cell.  A check works out only what its
 needs (NO FALLBACK, but raise only where the decision needs it):
   * a cell in the check's safe colour (49 black, 50 green, 51 red) is never classified;
   * a cheap conservative pre-filter skips formulas that cannot be in a failing class
-    (49: green formulas with a direct reference to another sheet; 50: formulas that cannot be
-    a pure reference; 51: formulas that cannot read another workbook);
-  * a font colour that cannot be resolved raises only when the cell's class makes the colour
-    decide the verdict (49: OWN / CROSS cells; 50: pointers; 51: external cells);
+    (49: green formulas with a direct reference to another sheet; 50: formulas that cannot
+    leave their sheet - no '!', no '[', no identifier spelled like a name or table; 51:
+    formulas that cannot read another workbook);
+  * a font colour that cannot be resolved is read as automatic / black (Patrick 2026-10-05);
   * 49: a non-black, non-green formula that cannot be classified still fails when cheap scans
-    show it can be neither a pointer nor a reader of another workbook (else it raises);
+    show it cannot leave its sheet (else it is skipped under the every-attempt-graded default
+    unparsable_formula);
+  * 49 and 50 read the one constant cell an =INDIRECT(A20) address comes from in a second pass
+    when that decides a cell: whether it stays on its own sheet (49's) or reads another (50's);
   * a defined name whose scope is unknown (bad localSheetId) raises only where the possible
     definitions could change this check's decision.
 """
@@ -1087,6 +1095,7 @@ class ColourCheck(Check):
         self._addr: dict = {}          # second pass: (row, col) -> ("const", value) | ("formula", ref)
         self.n_pending = 0
         self.n_hyperlink = 0           # HYPERLINK navigation cells ignored (Patrick 2026-10-03)
+        self.n_quick_direct = 0        # 50: cells charged by a direct other-sheet reference, unparsed
         self._hyper: dict = {}         # memo: formula text -> is_hyperlink_formula
 
     def style_colour(self, s: int, where: str) -> tuple:
@@ -1175,6 +1184,13 @@ class ColourCheck(Check):
         else:
             if not self.prefilter(text, fam, own):
                 return
+            quick = None if child else self.quick_class(text, own)   # a child's copy may be pushed off the grid
+            if quick is not None:                   # 50: a direct other-sheet reference settles it (no parse)
+                self.n_quick_direct += 1
+                self._cand.setdefault((quick, argb), {})[(cell.row, cell.col)] = fkey
+                if fkey not in self._fkeys and info is not None:
+                    self._fkeys[fkey] = info
+                return
             cls = self._classify_cell(text, child, cell, fam)
             if cls is None:
                 return                              # unparsable: skipped (recorded)
@@ -1224,6 +1240,10 @@ class ColourCheck(Check):
     def prefilter(self, text: str, fam: Optional[str], own: str) -> bool:
         """False = the formula cannot be in a class that fails this check (no parse needed)."""
         return True
+
+    def quick_class(self, text: str, own: str):
+        """A reason (mistake) settled by a cheap scan, without classifying; None = classify (default)."""
+        return None
 
     def class_needed(self, fam: Optional[str], text: Optional[str] = None) -> bool:
         """False = a cell of this colour is decided without its class (the class only words

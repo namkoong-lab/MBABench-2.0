@@ -17,11 +17,22 @@
 3. "LibreOffice gaps": formula cells whose LibreOffice value is #NAME? / #VALUE! although Excel
    would compute them (a function LibreOffice does not implement, a spill reference A1#, a
    LAMBDA name, an array-evaluation difference, ...; see `classify_lo_error`).  A GENUINE
-   error (misspelled function CONUTIFS, undefined name, "abc"+1) is not a gap.
+   error (misspelled function CONUTIFS, undefined name, "abc"+1, a modern function stored
+   without its _xlfn. prefix) is not a gap.
 4. Any gap -> the file needs a recalculation by real Excel (`excel_recalc`: AppleScript on
    macOS, COM via PowerShell on Windows).  Behind `policy.excel_allowed` and an availability
-   probe; when Excel is needed and not allowed / not available -> GradingError naming the gap
-   cells (no fallback).
+   probe (OFF in production, Patrick 2026-10-04): with Excel off the gap cells keep their
+   LibreOffice error value "as displayed", the plan lists them (`gaps`, capped, and the full
+   `gap_cells`), and since judge v15 No formula errors (22) reads that full set through
+   Package.provenance.gap_cells: an attempt whose only error cells are gap cells is "undecided"
+   (the LLM judge decides it, told which cells are gaps and why) instead of failing.
+
+The gap list (LO_UNSUPPORTED_ALWAYS and the version-keyed sets) was verified against
+LibreOffice LO_VERIFIED_VERSION on 2026-10-28 with a probe workbook of 527 Excel function names
+(one row per function, =NAME() and =_xlfn.NAME(), recalculated through libreoffice_recalc;
+#NAME? in both columns = unsupported): re-run that probe on every LibreOffice upgrade and
+update the sets.  A function MISSING from the list is a false fail; a function wrongly ON it
+only costs code coverage (the attempt goes to the LLM), so err toward inclusion.
 
 The copy supplies VALUES only; structure and styles always come from the delivered file.
 """
@@ -48,6 +59,7 @@ from . import formula as F
 from . import lo_guard
 from . import lo_watchdog
 from .package import Package
+from .refs import split_ref
 from .sheet import ExcelError, SheetStream
 from .values import ValueSource, detect_provenance, make_context
 
@@ -64,19 +76,56 @@ def _default_soffice() -> str:
 DEFAULT_SOFFICE = _default_soffice()
 MAX_GAPS_LISTED = 25
 
+# The LibreOffice build the gap lists were verified against (probe of 2026-10-28, module doc).
+LO_VERIFIED_VERSION = "25.8.7"
 # Excel functions LibreOffice (25.8, the build on this Mac) cannot evaluate.  A LibreOffice
 # #NAME? / #VALUE! on a formula that uses one of these says nothing about Excel's display.
 # Verified against the corpus LibreOffice outputs (SCAN, LAMBDA, REDUCE, MAKEARRAY, MAP, BYCOL
-# -> #NAME?; spill references A1# / INDEX(B20#,..) -> #VALUE!) and the prototype's probes
-# (clusters/errors/formula_tools.py: LO 25.8 computes XLOOKUP, IFS, LET, TEXTBEFORE, VSTACK).
+# -> #NAME?; spill references A1# / INDEX(B20#,..) -> #VALUE!), the prototype's probes
+# (clusters/errors/formula_tools.py: LO 25.8 computes XLOOKUP, IFS, LET, TEXTBEFORE, VSTACK) and
+# the 527-function probe of 2026-10-28 (judge v15), which added TRANSLATE DETECTLANGUAGE
+# BINOM.DIST.RANGE ECMA.CEILING the seven CUBE functions RTD CALL REGISTER.ID SQL.REQUEST DBCS
+# PHONETIC THAIDIGIT YEN (each #NAME? in 25.8.7, missing here before) and moved REGEXTEST
+# REGEXEXTRACT REGEXREPLACE here from the 25.8 set (still #NAME? in 25.8.7).
 LO_UNSUPPORTED_ALWAYS = frozenset("""
 LAMBDA MAP REDUCE SCAN MAKEARRAY BYROW BYCOL ISOMITTED GROUPBY PIVOTBY PERCENTOF TRIMRANGE
 IMAGE ANCHORARRAY SINGLE STOCKHISTORY FIELDVALUE ARRAYTOTEXT VALUETOTEXT PY
+TRANSLATE DETECTLANGUAGE BINOM.DIST.RANGE ECMA.CEILING
+CUBEKPIMEMBER CUBEMEMBER CUBEMEMBERPROPERTY CUBERANKEDMEMBER CUBESET CUBESETCOUNT CUBEVALUE
+RTD CALL REGISTER.ID SQL.REQUEST DBCS PHONETIC THAIDIGIT YEN
+REGEXTEST REGEXEXTRACT REGEXREPLACE
 """.split())
-# added to LibreOffice in 24.8 / 25.8: unsupported on older builds
+# added to LibreOffice in 24.8 / 25.8: unsupported on older builds (the probe of 2026-10-28 confirmed
+# every one of these computes on 25.8.7, FILTER / SORT in their stored form _xlfn._xlws.FILTER / SORT)
 LO_ADDED_24_8 = frozenset("XLOOKUP XMATCH FILTER SORT SORTBY UNIQUE SEQUENCE RANDARRAY LET".split())
 LO_ADDED_25_8 = frozenset("""CHOOSECOLS CHOOSEROWS DROP EXPAND HSTACK VSTACK TAKE TEXTAFTER TEXTBEFORE
-TEXTSPLIT TOCOL TOROW WRAPCOLS WRAPROWS REGEXTEST REGEXEXTRACT REGEXREPLACE""".split())
+TEXTSPLIT TOCOL TOROW WRAPCOLS WRAPROWS""".split())
+# Functions Excel stores with the _xlfn. prefix (added in Excel 2010 or later; "future functions").  A
+# formula that calls one of these WITHOUT the prefix (=XLOOKUP(...) from a sloppy Python writer) shows
+# #NAME? in Excel too until the cell is re-entered - a GENUINE error, not a gap (Patrick 2026-10-28,
+# judge v15), whatever LibreOffice makes of it.  Kept conservative: a function wrongly listed here would
+# turn a correct unprefixed call that LibreOffice lacks into a false fail, one wrongly missing only
+# costs coverage, so only functions certain to need the prefix are listed (Excel 2010-2013 statistics /
+# maths / engineering additions, the 2016+ forecast, text and dynamic-array functions).
+XLFN_REQUIRED = frozenset("""
+AGGREGATE BETA.DIST BETA.INV BINOM.DIST BINOM.INV CEILING.PRECISE CHISQ.DIST CHISQ.DIST.RT CHISQ.INV
+CHISQ.INV.RT CHISQ.TEST CONFIDENCE.NORM CONFIDENCE.T COVARIANCE.P COVARIANCE.S ERF.PRECISE ERFC.PRECISE
+EXPON.DIST F.DIST F.DIST.RT F.INV F.INV.RT F.TEST FLOOR.PRECISE GAMMA.DIST GAMMA.INV GAMMALN.PRECISE
+HYPGEOM.DIST ISO.CEILING LOGNORM.DIST LOGNORM.INV MODE.MULT MODE.SNGL NEGBINOM.DIST NETWORKDAYS.INTL
+NORM.DIST NORM.INV NORM.S.DIST NORM.S.INV PERCENTILE.EXC PERCENTILE.INC PERCENTRANK.EXC PERCENTRANK.INC
+POISSON.DIST QUARTILE.EXC QUARTILE.INC RANK.AVG RANK.EQ STDEV.P STDEV.S T.DIST T.DIST.2T T.DIST.RT T.INV
+T.INV.2T T.TEST VAR.P VAR.S WEIBULL.DIST WORKDAY.INTL Z.TEST
+ACOT ACOTH ARABIC BASE BINOM.DIST.RANGE BITAND BITLSHIFT BITOR BITRSHIFT BITXOR CEILING.MATH COMBINA COT
+COTH CSC CSCH DAYS DECIMAL ENCODEURL FILTERXML FLOOR.MATH FORMULATEXT GAMMA GAUSS IFNA IMCOSH IMCOT IMCSC
+IMCSCH IMSEC IMSECH IMSINH IMTAN ISFORMULA ISOWEEKNUM MUNIT NUMBERVALUE PDURATION PERMUTATIONA PHI RRI
+SEC SECH SHEET SHEETS SKEW.P UNICHAR UNICODE WEBSERVICE XOR
+FORECAST.ETS FORECAST.ETS.CONFINT FORECAST.ETS.SEASONALITY FORECAST.ETS.STAT FORECAST.LINEAR
+CONCAT IFS MAXIFS MINIFS SWITCH TEXTJOIN
+FILTER RANDARRAY SEQUENCE SORT SORTBY UNIQUE XLOOKUP XMATCH LET LAMBDA BYCOL BYROW MAKEARRAY MAP
+REDUCE SCAN ISOMITTED ARRAYTOTEXT VALUETOTEXT TEXTAFTER TEXTBEFORE TEXTSPLIT VSTACK HSTACK TOCOL TOROW
+WRAPROWS WRAPCOLS TAKE DROP CHOOSECOLS CHOOSEROWS EXPAND IMAGE STOCKHISTORY GROUPBY PIVOTBY PERCENTOF
+REGEXTEST REGEXEXTRACT REGEXREPLACE TRIMRANGE TRANSLATE DETECTLANGUAGE ANCHORARRAY SINGLE
+""".split())
 # functions that return arrays: in a plain (non-array) formula Excel's legacy evaluation (take
 # the top-left / intersect) and LibreOffice's (whole block -> Err:502/504 = #VALUE!) differ
 ARRAY_FUNCS = frozenset("""SEQUENCE TRANSPOSE MMULT MINVERSE MDETERM MUNIT FREQUENCY TREND GROWTH
@@ -99,7 +148,7 @@ COUPDAYS COUPDAYSNC COUPNCD COUPNUM COUPPCD COVAR COVARIANCE.P COVARIANCE.S CRIT
 CUBEKPIMEMBER CUBEMEMBER CUBEMEMBERPROPERTY CUBERANKEDMEMBER CUBESET CUBESETCOUNT CUBEVALUE
 CUMIPMT CUMPRINC DATE DATEDIF DATEVALUE DAVERAGE DAY DAYS DAYS360 DB DBCS DCOUNT DCOUNTA DDB DEC2BIN
 DEC2HEX DEC2OCT DECIMAL DEGREES DELTA DETECTLANGUAGE DEVSQ DGET DISC DMAX DMIN DOLLAR DOLLARDE
-DOLLARFR DPRODUCT DROP DSTDEV DSTDEVP DSUM DURATION DVAR DVARP EDATE EFFECT ENCODEURL EOMONTH ERF
+DOLLARFR DPRODUCT DROP DSTDEV DSTDEVP DSUM DURATION DVAR DVARP ECMA.CEILING EDATE EFFECT ENCODEURL EOMONTH ERF
 ERF.PRECISE ERFC ERFC.PRECISE ERROR.TYPE EUROCONVERT EVEN EXACT EXP EXPAND EXPON.DIST EXPONDIST
 F.DIST F.DIST.RT F.INV F.INV.RT F.TEST FACT FACTDOUBLE FALSE FDIST FIELDVALUE FILTER FILTERXML FIND
 FINDB FINV FISHER FISHERINV FIXED FLOOR FLOOR.MATH FLOOR.PRECISE FORECAST FORECAST.ETS
@@ -130,7 +179,7 @@ TEXTBEFORE TEXTJOIN TEXTSPLIT TIME TIMEVALUE TINV TOCOL TODAY TOROW TRANSLATE TR
 TRIMMEAN TRIMRANGE TRUE TRUNC TTEST TYPE UNICHAR UNICODE UNIQUE UPPER VALUE VALUETOTEXT VAR VAR.P
 VAR.S VARA VARP VARPA VDB VLOOKUP VSTACK WEBSERVICE WEEKDAY WEEKNUM WEIBULL WEIBULL.DIST WORKDAY
 WORKDAY.INTL WRAPCOLS WRAPROWS XIRR XLOOKUP XMATCH XNPV XOR YEAR YEARFRAC YIELD YIELDDISC YIELDMAT
-Z.TEST ZTEST
+YEN THAIDIGIT Z.TEST ZTEST
 """.split())
 
 
@@ -207,6 +256,7 @@ class ValuePlan:
     n_gaps: int = 0
     gaps: list = field(default_factory=list)       # [Gap] (first MAX_GAPS_LISTED)
     gap_functions: list = field(default_factory=list)
+    gap_cells: list = field(default_factory=list)  # EVERY gap: [[sheet, ref, functions_text], ...] (judge v15)
     n_lo_errors: int = 0               # #NAME?/#VALUE! cells in the LibreOffice copy
     n_genuine_lo_errors: int = 0
     timings: dict = field(default_factory=dict)    # libreoffice_s, excel_s, gap_scan_s, from_cache
@@ -224,6 +274,19 @@ class ValuePlan:
         if self.value_path is None:
             return None
         return ValueSource(self.value_path, errors_vetted=self.errors_vetted)
+
+    def gap_cell_set(self) -> dict:
+        """{(sheet, row, col): what makes LibreOffice unreliable there} for EVERY gap cell (an array /
+        spill range by its anchor), for No formula errors (22).  Empty when the values are Excel's own
+        (source 'cache' or 'excel': no gaps by definition) or the copy has none."""
+        if self.source != "libreoffice":
+            return {}
+        out = {}
+        for sheet, ref, what in self.gap_cells:
+            rc = split_ref(ref)
+            if rc is not None:
+                out[(sheet, rc[0], rc[1])] = what
+        return out
 
 
 def file_hash(path: str) -> str:
@@ -560,6 +623,14 @@ def classify_lo_error(text: Optional[str], value: str, defined: dict, tables: fr
         f = F.parse(text)
     except GradingError as e:
         return True, [], f"formula cannot be parsed ({str(e)[:120]}): Excel's display unknown"
+    # judge v15 (Patrick 2026-10-28): a future function stored without its _xlfn. prefix is #NAME? in Excel
+    # too (the file is broken until the cell is re-entered) - genuine, whatever LibreOffice lacks
+    unprefixed = sorted({c.name for c in f.functions
+                         if c.builtin and not c.local and not c.eta and c.name in XLFN_REQUIRED
+                         and "_xlfn." not in (c.prefix or "").lower()})
+    if unprefixed:
+        return False, unprefixed, (f"genuine {value}: {', '.join(unprefixed)} stored without the _xlfn. prefix "
+                                   f"(Excel shows #NAME? too until the cell is re-entered)")
     bad_fn = sorted({c.name for c in f.functions if c.builtin and not c.local and c.name in unsupported})
     feats = list(bad_fn)
     if any(o.spill for o in f.operands) or any(c.spilled for c in f.functions):
@@ -610,6 +681,15 @@ def classify_lo_error(text: Optional[str], value: str, defined: dict, tables: fr
         return True, what, ("#VALUE! on a plain formula with " + ", ".join(what) +
                             ": Excel's legacy array evaluation (implicit intersection / top-left) may differ")
     return False, [], "genuine #VALUE!: scalar operands and scalar functions only"
+
+
+def _gap_what(g: "Gap") -> str:
+    """Short text for No formula errors (22): what makes LibreOffice unreliable at this gap cell."""
+    if g.functions and not g.why.startswith("#NAME? although"):
+        return ", ".join(g.functions)
+    if g.why.startswith("#NAME? although"):
+        return "inherits #NAME? from a cell LibreOffice cannot compute (no function of its own is missing)"
+    return g.why[:80]
 
 
 def find_gaps(pkg: Package, source: ValueSource, lo_version: Optional[tuple]) -> tuple[list, int, int]:
@@ -690,8 +770,11 @@ def _load_plan(cache_dir: str) -> Optional[ValuePlan]:
             d = json.load(fh)
         if d.get("value_path") and not os.path.exists(d["value_path"]):
             return None
+        if d.get("n_gaps", 0) and "gap_cells" not in d:
+            return None                            # written before judge v15: the full gap list is missing
         plan = ValuePlan(d["source"], d.get("value_path"), d["writer"], d["file_hash"], d.get("errors_vetted", False),
                          d.get("n_gaps", 0), [Gap(**g) for g in d.get("gaps", [])], d.get("gap_functions", []),
+                         [list(x) for x in d.get("gap_cells", [])],
                          d.get("n_lo_errors", 0), d.get("n_genuine_lo_errors", 0), dict(d.get("timings", {})),
                          d.get("lo_version"), list(d.get("notes", [])))
         plan.timings["from_cache"] = True
@@ -704,6 +787,7 @@ def _save_plan(cache_dir: str, plan: ValuePlan):
     os.makedirs(cache_dir, exist_ok=True)
     d = plan.summary()
     d["file_hash"] = plan.file_hash
+    d["gap_cells"] = plan.gap_cells
     d["timings"] = {k: v for k, v in plan.timings.items() if k != "from_cache"}
     with open(_meta_path(cache_dir), "w") as fh:
         json.dump(d, fh, indent=1)
@@ -764,6 +848,7 @@ def ensure_values(path: str, workdir: Optional[str] = None, policy: Optional[Rec
             plan = ValuePlan("libreoffice", lo_path, prov.writer, h, errors_vetted=False, n_gaps=len(gaps),
                              gaps=gaps[:MAX_GAPS_LISTED],
                              gap_functions=sorted({fn for g in gaps for fn in g.functions}),
+                             gap_cells=[[g.sheet, g.ref, _gap_what(g)] for g in gaps],
                              n_lo_errors=n_err, n_genuine_lo_errors=n_gen,
                              timings={"libreoffice_s": lo_s, "gap_scan_s": scan_s},
                              lo_version=lo_app)

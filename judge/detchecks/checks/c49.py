@@ -1,22 +1,29 @@
 """49 Formatting/Black font for calculations.
 
-Rule (Patrick's confirmed colour rule, 2026-10-02, applied fully 2026-10-03; details in
-docs/checks/49.md and colour_rules.py): every formula cell of the delivered workbook (all
-sheets, hidden ones too) is classified by what its formula reads; 49 judges two classes:
+Rule (Patrick's confirmed colour rule, 2026-10-02, applied fully 2026-10-03; CROSS re-ruled
+2026-10-26 for judge v15; details in docs/checks/49.md and colour_rules.py): every formula cell
+of the delivered workbook (all sheets, hidden ones too) is classified by what its formula reads;
+49 judges ONE class:
 
     OWN       uses only its own sheet, or no reference at all        -> must be black
-    CROSS     calculates with another sheet's cells                  -> black or green
-    POINTER   only points at another sheet's cell / range            -> NOT judged here (check 50)
-    EXTERNAL  reads another workbook                                 -> NOT judged here (check 51)
+    CROSS     calculates with another sheet's cells                  -> NOT judged here (check 50: green)
+    POINTER   only points at another sheet's cell / range            -> NOT judged here (check 50: green)
+    EXTERNAL  reads another workbook                                 -> NOT judged here (check 51: red)
 
-So 49 fails a non-black formula that is OWN, and a CROSS formula that is neither black nor
-green (guidance: "Green is acceptable only when the formula itself references another sheet").
-Black cells are never classified (black is fine in every class); green cells with a direct
-reference to another sheet are CROSS, POINTER or EXTERNAL, all fine here, and are accepted
-without a full parse.  A red / blue / grey / white ... cell needs its class (it is fine only
-as a POINTER or EXTERNAL cell); when the formula cannot be classified it still fails if it
-cannot possibly be a pointer or read another workbook (cheap conservative pre-filters), else
-GradingError.  HYPERLINK navigation cells are ignored (ruling 2026-10-03, "not a calculation";
+Patrick 2026-10-26 (new house rules, v3: black is for formulas that reference NO other sheet;
+green for ANY formula that references another sheet, a pure link or a calculation): 49 fails a
+non-black formula that is OWN, and nothing else.  Under v13/v14 it also judged CROSS as "black
+or green"; a black cross-sheet calculation is now 50's mistake and 50's alone, so every formula
+is charged once.  Black cells are never classified (black is fine for OWN, and the other classes
+are other checks' business); green cells with a direct reference to another sheet are CROSS,
+POINTER or EXTERNAL, none judged here, and are accepted without a full parse.  A red / blue /
+grey / white ... cell needs its class (it is 49's only as an OWN cell); when the formula cannot
+be classified it still fails if it cannot possibly leave its sheet (cheap conservative
+pre-filter), else it is skipped under the every-attempt-graded default unparsable_formula.  A
+non-black, non-green formula whose only possible other-sheet reading goes through a defined name
+of unknown scope, or an INDIRECT address built from cell contents, is wrong either way (OWN is
+49's, CROSS is 50's) and 49 charges it, so that 50 need not read the address (reasons "unsure"
+and "indirect").  HYPERLINK navigation cells are ignored (ruling 2026-10-03, "not a calculation";
 colour_rules.is_hyperlink_formula: a HYPERLINK call alone, or - since the 2026-10-04 review -
 inside IFERROR / IFNA / IF guards whose other arguments are literals, e.g. the ChatGPT writer's
 =IFERROR(HYPERLINK("#'Summary'!A1","OPEN"),"OPEN")).
@@ -38,12 +45,11 @@ from .colour_rules import (CROSS, EXTERNAL, OWN, POINTER, UNCLASSIFIED, ColourCh
                            sheets_named_in_text,
                            quick_reads_other_sheet)
 
-# Colour families allowed per JUDGED class under check 49 (POINTER -> 50, EXTERNAL -> 51).
+# Colour families allowed per JUDGED class under check 49 (CROSS and POINTER -> 50, EXTERNAL -> 51).
 ALLOWED = {
     OWN: frozenset({"black"}),
-    CROSS: frozenset({"black", "green"}),
 }
-NOT_JUDGED = frozenset({POINTER, EXTERNAL})
+NOT_JUDGED = frozenset({CROSS, POINTER, EXTERNAL})
 # Read the own-sheet cell an =INDIRECT(A20) address comes from (second pass) when that decides a
 # green cell.  False: such a cell raises GradingError like any computed address.
 INDIRECT_READ_ADDRESS_CELL = True
@@ -52,20 +58,25 @@ QUICK_CACHE_MAX = 200_000          # memoised quick-scan results (sheet, formula
 # address built from cell contents: it uses its own sheet or calculates with another sheet's
 # cells through that address, and this colour is wrong either way (the address is not read).
 INDIRECT_UNKNOWN = "indirect"
+# Reason for a non-black, non-green cell using a defined name of unknown scope (bad localSheetId): it uses
+# its own sheet or another sheet's cells through that name, and this colour is wrong either way.
+UNSURE = "unsure"
 
 _WHAT = {
     OWN: "formula using only its own sheet",
-    CROSS: "calculation reading another sheet",
     INDIRECT_UNKNOWN: "formula whose INDIRECT address is built from cell contents (it either stays on its own sheet or "
                       "calculates with another sheet's cells through that address; this colour is wrong either way)",
-    UNCLASSIFIED: "formula (what it reads could not be worked out, and need not be: it cannot be a link to "
-                  "another sheet or workbook, and this colour is wrong for every other formula)",
+    UNSURE: "formula using a defined name whose scope is unknown (it either stays on its own sheet or calculates "
+            "with another sheet's cells through that name; this colour is wrong either way)",
+    UNCLASSIFIED: "formula (what it references could not be worked out, and need not be: this colour is wrong "
+                  "whatever a formula references)",
 }
 _RULE = {
     OWN: "formulas that use only their own sheet must be black",
-    CROSS: "calculations must be black (green is accepted where the formula reads another sheet)",
-    INDIRECT_UNKNOWN: "calculations must be black (green only where the formula reads another sheet)",
-    UNCLASSIFIED: "calculations must be black (green only where the formula reads another sheet)",
+    INDIRECT_UNKNOWN: "formulas must be black, or green where they read another sheet",
+    UNSURE: "formulas must be black, or green where they read another sheet",
+    UNCLASSIFIED: "formulas must be black, green where they read another sheet, red where they read another "
+                  "workbook",
 }
 
 
@@ -79,7 +90,7 @@ class C49(ColourCheck):
         self.n_green_direct = 0
         self.n_unclassified = 0
         self.n_address_cells = 0
-        self.n_left = {POINTER: 0, EXTERNAL: 0}
+        self.n_left = {POINTER: 0, CROSS: 0, EXTERNAL: 0}
         self._quick: dict = {}
 
     def prefilter(self, text, fam, own) -> bool:
@@ -100,11 +111,16 @@ class C49(ColourCheck):
         return True
 
     def class_needed(self, fam, text=None) -> bool:
-        # red / blue / grey / white ... are wrong for OWN and CROSS; the class is needed only
-        # when the formula might be a POINTER or EXTERNAL cell (not judged here)
+        # green: OWN fails and every other class passes, so the class decides.  Blue / grey / white ...
+        # are wrong in EVERY class (OWN here, CROSS / POINTER under 50, EXTERNAL under 51), so a formula
+        # that cannot be classified still fails here, charged once (50 and 51 never charge a cell they
+        # cannot classify).  Red is right for EXTERNAL only: the class is needed when the text may read
+        # another workbook.
         if fam in ("green", None) or text is None:
             return True
-        return self.clf.may_be_pointer(text) or self.clf.may_read_other_book(text)
+        if fam == "red":
+            return self.clf.may_read_other_book(text)
+        return False
 
     def _raise(self, cell, what: str):
         raise GradingError(f"{self.key}: '{cell.sheet}'!{cell.ref}: {what}")
@@ -118,12 +134,12 @@ class C49(ColourCheck):
                 if cls.unsure and not cls.direct_other:
                     self._raise(cell, f"green formula whose only other-sheet reading goes through a {cls.unsure}; "
                                       f"whether it reads another sheet (green allowed) cannot be decided")
-                if cls.kind in NOT_JUDGED:
-                    self.n_left[cls.kind] += 1
-                elif cls.indirect_assumed and not cls.other_sheets:
-                    # Patrick 2026-10-06: sheet-qualified INDIRECT address whose sheet name is computed
+                if cls.kind == CROSS and cls.indirect_assumed and not cls.other_sheets:
+                    # Patrick 2026-10-06: sheet-qualified INDIRECT address whose sheet name is computed is
+                    # taken to read another sheet (green accepted)
                     self.note_default("indirect_sheet_unverified",
                                       f"'{cell.sheet}'!{cell.ref}: {str(cell.formula_text)[:120]}")
+                self.n_left[cls.kind] += 1                 # CROSS / POINTER -> 50, EXTERNAL -> 51
                 return None
             if cls.unsure:
                 self._raise(cell, f"green formula using a {cls.unsure}; whether it reads another sheet "
@@ -144,7 +160,7 @@ class C49(ColourCheck):
                                   f"'{cell.sheet}'!{cell.ref}: {str(cell.formula_text)[:120]}")
                 return None
             return OWN
-        # red, blue, grey, white ...: wrong for OWN and CROSS; pointers -> 50, externals -> 51
+        # red, blue, grey, white ...: wrong for OWN; cross-sheet calculations and pointers -> 50, externals -> 51
         if cls.kind == EXTERNAL:
             if cls.unsure_ext and not cls.direct_ext:
                 self._raise(cell, f"{fam} formula whose only other-workbook reading goes through a {cls.unsure}; "
@@ -154,14 +170,16 @@ class C49(ColourCheck):
             return None
         if cls.unsure and (cls.pure_name or cls.unsure_ext):
             self._raise(cell, f"{fam} formula using a {cls.unsure}; whether it is a link to another sheet or "
-                              f"workbook (judged by checks 50 / 51, not here) or a calculation (must be black) "
-                              f"cannot be decided")
-        if cls.kind == POINTER:
-            self.n_left[POINTER] += 1
+                              f"workbook (judged by checks 50 / 51, not here) or an own-sheet formula (must be "
+                              f"black) cannot be decided")
+        if cls.kind in (POINTER, CROSS):
+            self.n_left[cls.kind] += 1                     # 50's business (must be green there)
             return None
-        if cls.kind == OWN and cls.indirect_unresolved:
+        if cls.indirect_unresolved:
             return INDIRECT_UNKNOWN     # own sheet, or another sheet through the address: wrong either way
-        return cls.kind                 # OWN or CROSS (a computed INDIRECT never reaches another workbook)
+        if cls.unsure:
+            return UNSURE               # own sheet, or another sheet through the name: wrong either way
+        return OWN                      # (a computed INDIRECT never reaches another workbook)
 
     def pending_is_mistake(self, sheet: str, targets: tuple, parts: bool = False) -> Optional[str]:
         """A green =INDIRECT(A20)-style cell: fine when any address cell's text is a reference
@@ -199,9 +217,8 @@ class C49(ColourCheck):
         return f"{_WHAT[why]} in {describe_colour(argb)} font; {_RULE[why]}"
 
     def required_families(self, why) -> frozenset:
-        # Patrick 2026-10-06: a conditional format painting the cell black (or green for a calculation
-        # that reads another sheet) excuses a wrong base font
-        return frozenset({"black", "green"}) if why == CROSS else frozenset({"black"})
+        # Patrick 2026-10-06: a conditional format painting the cell black excuses a wrong base font
+        return frozenset({"black"})
 
     def finish(self) -> dict:
         st = self.base_stats()
@@ -209,10 +226,11 @@ class C49(ColourCheck):
         st["unclassified_offending_cells"] = self.n_unclassified
         st["indirect_address_cells_read"] = self.n_address_cells
         st["pointer_cells_left_to_check_50"] = self.n_left[POINTER]
+        st["cross_cells_left_to_check_50"] = self.n_left[CROSS]
         st["external_cells_left_to_check_51"] = self.n_left[EXTERNAL]
         return self.verdict(
-            f"All {self.n_formula_cells} formula cells are black, or green where the formula reads "
-            f"another sheet ({self.fam_counts['green']} green; links to another sheet or workbook and "
-            f"HYPERLINK cells are judged elsewhere / ignored).",
-            f"{st['offending_cells']} formula cell(s) in {{n}} block(s) are not black and not excused "
-            f"by reading another sheet.", st)
+            f"Every formula that references no other sheet is black ({self.n_formula_cells} formula cells, "
+            f"{self.fam_counts['black']} black; formulas reading another sheet or workbook are judged by "
+            f"checks 50 / 51, HYPERLINK cells ignored).",
+            f"{st['offending_cells']} formula cell(s) that reference no other sheet in {{n}} block(s) are not "
+            f"black.", st)
