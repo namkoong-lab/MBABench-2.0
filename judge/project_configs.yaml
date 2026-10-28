@@ -147,7 +147,8 @@ det_checks:
   # goes to <task folder>/det_checks_recalc/, deleted by the adapter as soon
   # as the checks finish). Excel recalculation stays OFF (Mac Excel asks for
   # file access on every file); cells
-  # LibreOffice cannot compute are used as displayed.
+  # LibreOffice cannot compute are used as displayed (No formula errors (22)
+  # knows them as gap cells: undecided when they are the only error cells).
   excel_recalc: false
   # Timeout of the first LibreOffice try; doubled on every retry.
   libreoffice_timeout_seconds: 600
